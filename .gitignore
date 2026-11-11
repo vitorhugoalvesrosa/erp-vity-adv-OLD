@@ -3,8 +3,17 @@
 __pycache__/
 *.pyc
 
+# Ignore environment files
+.env
+.env.*
+!.env.example
+
 # Ignore Django local database
 *.sqlite3
+
+# Ignore static/media build artifacts
+staticfiles/
+media/
 
 # Ignore OS files
 .DS_Store
