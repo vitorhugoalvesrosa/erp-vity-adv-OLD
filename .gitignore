@@ -1,0 +1,10 @@
+# Ignore Python virtual environment
+.venv/
+__pycache__/
+*.pyc
+
+# Ignore Django local database
+*.sqlite3
+
+# Ignore OS files
+.DS_Store
