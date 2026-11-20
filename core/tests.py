@@ -1,8 +1,15 @@
+import os
+import secrets
+from io import StringIO
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.test import TestCase
 from rest_framework.test import APIClient
 
 from core.access_control import MANAGER_GROUP, OPERATOR_GROUP, setup_access_groups
+from core.models import ERPUserBootstrap
 from produtos.models import Produto
 
 
@@ -57,3 +64,36 @@ class ApiRolePermissionTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 201)
+
+
+class ERPUserBootstrapTests(TestCase):
+    def test_bootstrap_creates_users_once_without_resetting_them(self):
+        env_passwords = {
+            "ERP_BOOTSTRAP_ADMIN_PASSWORD": secrets.token_urlsafe(32),
+            "ERP_BOOTSTRAP_GERENTE_PASSWORD": secrets.token_urlsafe(32),
+            "ERP_BOOTSTRAP_OPERADOR_PASSWORD": secrets.token_urlsafe(32),
+        }
+
+        with patch.dict(os.environ, env_passwords):
+            call_command("bootstrap_erp_users", stdout=StringIO())
+
+        user_model = get_user_model()
+        admin = user_model.objects.get(username="admin")
+        manager = user_model.objects.get(username="gerente")
+        operator = user_model.objects.get(username="operador")
+
+        self.assertTrue(admin.is_superuser)
+        self.assertFalse(manager.is_superuser)
+        self.assertTrue(manager.is_staff)
+        self.assertTrue(operator.is_staff)
+        self.assertTrue(
+            admin.check_password(env_passwords["ERP_BOOTSTRAP_ADMIN_PASSWORD"])
+        )
+        self.assertEqual(ERPUserBootstrap.objects.count(), 1)
+
+        changed_passwords = {key: secrets.token_urlsafe(32) for key in env_passwords}
+        with patch.dict(os.environ, changed_passwords):
+            call_command("bootstrap_erp_users", stdout=StringIO())
+
+        admin.refresh_from_db()
+        self.assertTrue(admin.check_password(env_passwords["ERP_BOOTSTRAP_ADMIN_PASSWORD"]))

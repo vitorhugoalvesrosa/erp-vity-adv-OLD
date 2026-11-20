@@ -28,7 +28,9 @@ python manage.py runserver
 
 O painel administrativo fica em `http://127.0.0.1:8000/admin/`.
 
-`create_erp_users` solicita senhas sem exibi-las, valida cada senha e cria ou atualiza as contas `admin`, `gerente` e `operador`. Use senhas fortes e exclusivas; elas não devem ser incluídas no repositório ou na documentação. Em produção, execute o comando pelo Shell do Render depois do deploy.
+`create_erp_users` solicita senhas sem exibi-las, valida cada senha e cria ou atualiza as contas `admin`, `gerente` e `operador`. Use senhas fortes e exclusivas; elas não devem ser incluídas no repositório ou na documentação.
+
+No plano Free do Render, o comando interativo não pode ser executado pelo Shell. Para criar as contas sem atualizar o plano, configure temporariamente `ERP_BOOTSTRAP_ADMIN_PASSWORD`, `ERP_BOOTSTRAP_GERENTE_PASSWORD` e `ERP_BOOTSTRAP_OPERADOR_PASSWORD` nas variáveis do serviço. O deploy executa o bootstrap uma única vez após as migrations; quando o deploy concluir, remova essas três variáveis. A conclusão fica registrada no banco e reinícios seguintes não redefinem as senhas.
 
 ## Perfis de acesso
 
@@ -66,6 +68,6 @@ Configure `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` ou `FRONTEND_URL` no `.
 
 ## Deploy no Render
 
-O arquivo `render.yaml` configura o Web Service e o PostgreSQL. Conecte o repositório ao Render e crie os recursos pelo Blueprint; o serviço instala `requirements.txt`, coleta os arquivos estáticos com WhiteNoise, executa as migrations e atualiza os grupos de acesso ao iniciar, e então inicia o Gunicorn.
+O arquivo `render.yaml` configura o Web Service e o PostgreSQL. Conecte o repositório ao Render e crie os recursos pelo Blueprint; o serviço instala `requirements.txt`, coleta os arquivos estáticos com WhiteNoise, executa as migrations, atualiza os grupos de acesso e tenta o bootstrap único das contas ao iniciar, e então inicia o Gunicorn.
 
 O Render fornece `DATABASE_URL` e gera `SECRET_KEY`. A configuração define `DEBUG=False` e redirecionamento HTTPS. O host externo é permitido via `RENDER_EXTERNAL_HOSTNAME`. Não publique arquivos `.env` ou credenciais; mantenha as variáveis secretas na configuração do ambiente do Render.
