@@ -21,13 +21,22 @@ Edite `.env` com os dados do PostgreSQL local. Quando `DATABASE_URL` estiver vaz
 
 ```bash
 python manage.py migrate
-python manage.py createsuperuser
+python manage.py setup_access_control
+python manage.py create_erp_users
 python manage.py runserver
 ```
 
 O painel administrativo fica em `http://127.0.0.1:8000/admin/`.
 
-> `python manage.py create_admin` cria ou redefine o usuário `admin` com uma senha fixa para desenvolvimento. Não execute esse comando em produção; use `createsuperuser` para criar uma credencial segura.
+`create_erp_users` solicita senhas sem exibi-las, valida cada senha e cria ou atualiza as contas `admin`, `gerente` e `operador`. Use senhas fortes e exclusivas; elas não devem ser incluídas no repositório ou na documentação. Em produção, execute o comando pelo Shell do Render depois do deploy.
+
+## Perfis de acesso
+
+- `admin`: superusuário com acesso total.
+- `gerente`: acesso total às permissões do Django e aos recursos da API.
+- `operador`: somente leitura nos recursos de CRM, produtos e financeiro, sem permissões de escrita ou gestão de usuários.
+
+O deploy atualiza os grupos e suas permissões após aplicar as migrations.
 
 ## Aplicações
 
@@ -57,6 +66,6 @@ Configure `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` ou `FRONTEND_URL` no `.
 
 ## Deploy no Render
 
-O arquivo `render.yaml` configura o Web Service e o PostgreSQL. Conecte o repositório ao Render e crie os recursos pelo Blueprint; o serviço instala `requirements.txt`, coleta os arquivos estáticos com WhiteNoise, executa as migrations ao iniciar e inicia o Gunicorn.
+O arquivo `render.yaml` configura o Web Service e o PostgreSQL. Conecte o repositório ao Render e crie os recursos pelo Blueprint; o serviço instala `requirements.txt`, coleta os arquivos estáticos com WhiteNoise, executa as migrations e atualiza os grupos de acesso ao iniciar, e então inicia o Gunicorn.
 
 O Render fornece `DATABASE_URL` e gera `SECRET_KEY`. A configuração define `DEBUG=False` e redirecionamento HTTPS. O host externo é permitido via `RENDER_EXTERNAL_HOSTNAME`. Não publique arquivos `.env` ou credenciais; mantenha as variáveis secretas na configuração do ambiente do Render.
