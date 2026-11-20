@@ -32,6 +32,8 @@ O painel administrativo fica em `http://127.0.0.1:8000/admin/`.
 
 No plano Free do Render, o comando interativo não pode ser executado pelo Shell. Para criar as contas sem atualizar o plano, configure temporariamente `ERP_BOOTSTRAP_ADMIN_PASSWORD`, `ERP_BOOTSTRAP_GERENTE_PASSWORD` e `ERP_BOOTSTRAP_OPERADOR_PASSWORD` nas variáveis do serviço. O deploy executa o bootstrap uma única vez após as migrations; quando o deploy concluir, remova essas três variáveis. A conclusão fica registrada no banco e reinícios seguintes não redefinem as senhas.
 
+Se precisar redefinir a senha de `admin` depois do bootstrap, configure `ERP_BOOTSTRAP_ADMIN_PASSWORD` com a nova senha e `ERP_ADMIN_PASSWORD_RESET_TOKEN` com um token aleatório de pelo menos 32 caracteres. Após o deploy concluir, remova as duas variáveis. O token é registrado como usado e não redefinirá a senha novamente em reinícios.
+
 ## Perfis de acesso
 
 - `admin`: superusuário com acesso total.

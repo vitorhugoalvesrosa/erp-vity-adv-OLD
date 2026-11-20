@@ -9,7 +9,8 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from core.access_control import MANAGER_GROUP, OPERATOR_GROUP, setup_access_groups
-from core.models import ERPUserBootstrap
+from core.management.commands.bootstrap_erp_users import BOOTSTRAP_NAME
+from core.models import ERPAdminPasswordReset, ERPUserBootstrap
 from produtos.models import Produto
 
 
@@ -96,4 +97,45 @@ class ERPUserBootstrapTests(TestCase):
             call_command("bootstrap_erp_users", stdout=StringIO())
 
         admin.refresh_from_db()
-        self.assertTrue(admin.check_password(env_passwords["ERP_BOOTSTRAP_ADMIN_PASSWORD"]))
+        self.assertTrue(
+            admin.check_password(env_passwords["ERP_BOOTSTRAP_ADMIN_PASSWORD"])
+        )
+
+
+class ERPAdminPasswordResetTests(TestCase):
+    def test_password_reset_token_is_one_time_and_activates_admin(self):
+        user_model = get_user_model()
+        admin = user_model.objects.create_user(
+            username="admin",
+            password=secrets.token_urlsafe(32),
+            is_active=False,
+        )
+        ERPUserBootstrap.objects.create(name=BOOTSTRAP_NAME)
+
+        password = secrets.token_urlsafe(32)
+        reset_token = secrets.token_urlsafe(32)
+        env = {
+            "ERP_BOOTSTRAP_ADMIN_PASSWORD": password,
+            "ERP_ADMIN_PASSWORD_RESET_TOKEN": reset_token,
+        }
+        with patch.dict(os.environ, env):
+            call_command("bootstrap_erp_users", stdout=StringIO())
+
+        admin.refresh_from_db()
+        self.assertTrue(admin.is_active)
+        self.assertTrue(admin.is_staff)
+        self.assertTrue(admin.is_superuser)
+        self.assertTrue(admin.check_password(password))
+        self.assertEqual(ERPAdminPasswordReset.objects.count(), 1)
+
+        with patch.dict(
+            os.environ,
+            {
+                **env,
+                "ERP_BOOTSTRAP_ADMIN_PASSWORD": secrets.token_urlsafe(32),
+            },
+        ):
+            call_command("bootstrap_erp_users", stdout=StringIO())
+
+        admin.refresh_from_db()
+        self.assertTrue(admin.check_password(password))
