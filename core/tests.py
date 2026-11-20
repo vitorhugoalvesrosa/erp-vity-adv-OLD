@@ -6,13 +6,32 @@ from unittest.mock import patch
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from django.test import RequestFactory, TestCase
+from django.urls import reverse
+from django.test import RequestFactory, SimpleTestCase, TestCase
 from rest_framework.test import APIClient
 
 from core.access_control import MANAGER_GROUP, OPERATOR_GROUP, setup_access_groups
 from core.management.commands.bootstrap_erp_users import BOOTSTRAP_NAME
 from core.models import ERPAdminPasswordReset, ERPUserBootstrap
 from produtos.models import Produto
+
+
+class HomePageRouteTests(SimpleTestCase):
+    def test_homepage_and_module_links_resolve(self):
+        routes = {
+            "home": "/",
+            "admin:login": "/admin/login/",
+            "admin:crm_conta_changelist": "/admin/crm/conta/",
+            "admin:crm_proposta_changelist": "/admin/crm/proposta/",
+            "admin:produtos_produto_changelist": "/admin/produtos/produto/",
+            "admin:financeiro_pedidovenda_changelist": "/admin/financeiro/pedidovenda/",
+            "admin:financeiro_contareceber_changelist": "/admin/financeiro/contareceber/",
+            "admin:financeiro_pagamento_changelist": "/admin/financeiro/pagamento/",
+        }
+
+        for name, path in routes.items():
+            with self.subTest(route=name):
+                self.assertEqual(reverse(name), path)
 
 
 class ApiRolePermissionTests(TestCase):
