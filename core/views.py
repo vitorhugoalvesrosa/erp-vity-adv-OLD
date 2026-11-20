@@ -70,6 +70,7 @@ MODULES = {
             ("nome", "Produto", "text"),
             ("sku", "SKU", "text"),
             ("preco", "Preço", "currency"),
+            ("eh_servico", "Tipo", "service_type"),
             ("quantidade_estoque", "Estoque", "number"),
             ("ativo", "Status", "boolean"),
         ],
@@ -209,6 +210,21 @@ def home(request):
     )
 
 
+@login_required
+def administration(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
+    return render(
+        request,
+        "core/administration.html",
+        {
+            "page_title": "Administração",
+            "active_module": "administration",
+        },
+    )
+
+
 def _get_module(module):
     try:
         return MODULES[module]
@@ -228,7 +244,12 @@ def _get_columns(module, objects):
         for field_name, _label, kind in module["columns"]:
             value = getattr(obj, field_name)
             display = getattr(obj, f"get_{field_name}_display", None)
-            if display:
+            if field_name == "quantidade_estoque" and getattr(obj, "eh_servico", False):
+                value = "Não controlado"
+                kind = "text"
+            elif kind == "service_type":
+                value = "Serviço" if value else "Produto"
+            elif display:
                 value = display()
             elif kind == "boolean":
                 value = "Ativo" if value else "Inativo"

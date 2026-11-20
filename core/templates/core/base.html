@@ -82,11 +82,12 @@
 
             <div class="sidebar-spacer"></div>
             {% if user.is_superuser %}
-                <div class="sidebar-note">
-                    <strong>Área administrativa</strong>
-                    <p>Configurações avançadas e gerenciamento de usuários.</p>
-                    <a class="text-link" href="{% url 'admin:index' %}">Abrir Django Admin →</a>
-                </div>
+                <span class="nav-label">Administração</span>
+                <nav class="sidebar-nav" aria-label="Administração">
+                    <a class="nav-link {% if active_module == 'administration' %}is-active{% endif %}" href="{% url 'admin-settings' %}">
+                        <span class="nav-icon">AD</span> Configurações
+                    </a>
+                </nav>
             {% endif %}
             <div class="sidebar-footer">
                 <span class="user-avatar" aria-hidden="true">{{ user.username|slice:":1" }}</span>
@@ -100,7 +101,7 @@
 
         <div class="main-area">
             <header class="topbar">
-                <button class="mobile-menu-button" id="menu-toggle" aria-label="Abrir menu" aria-controls="app-sidebar" aria-expanded="false">☰</button>
+                <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Ocultar menu lateral" aria-controls="app-sidebar" aria-expanded="true">☰</button>
                 <div class="topbar-title">
                     <span>ERP Vity <span aria-hidden="true">/</span> workspace</span>
                     <strong>{{ page_title }}</strong>
@@ -127,20 +128,60 @@
         </div>
     </div>
     <script>
+        const appShell = document.querySelector(".app-shell");
         const sidebar = document.getElementById("app-sidebar");
         const toggle = document.getElementById("menu-toggle");
         const overlay = document.getElementById("sidebar-overlay");
-        const closeMenu = () => {
+        const mobileViewport = window.matchMedia("(max-width: 800px)");
+        const sidebarStorageKey = "erp-vity-sidebar-hidden";
+        let mobileMenuOpen = false;
+        if (window.localStorage.getItem(sidebarStorageKey) === "true") {
+            appShell.classList.add("sidebar-hidden");
+        }
+        const closeMobileMenu = () => {
+            mobileMenuOpen = false;
             sidebar.classList.remove("is-open");
             overlay.classList.remove("is-visible");
-            toggle.setAttribute("aria-expanded", "false");
+            if (mobileViewport.matches) {
+                toggle.setAttribute("aria-expanded", "false");
+                toggle.setAttribute("aria-label", "Abrir menu lateral");
+            }
+        };
+        const syncMenuForViewport = () => {
+            closeMobileMenu();
+            if (!mobileViewport.matches) {
+                const hidden = appShell.classList.contains("sidebar-hidden");
+                toggle.setAttribute("aria-expanded", String(!hidden));
+                toggle.setAttribute(
+                    "aria-label",
+                    hidden ? "Exibir menu lateral" : "Ocultar menu lateral"
+                );
+            }
         };
         toggle.addEventListener("click", () => {
-            const isOpen = sidebar.classList.toggle("is-open");
-            overlay.classList.toggle("is-visible", isOpen);
-            toggle.setAttribute("aria-expanded", String(isOpen));
+            if (mobileViewport.matches) {
+                mobileMenuOpen = !mobileMenuOpen;
+                sidebar.classList.toggle("is-open", mobileMenuOpen);
+                overlay.classList.toggle("is-visible", mobileMenuOpen);
+                toggle.setAttribute("aria-expanded", String(mobileMenuOpen));
+                toggle.setAttribute(
+                    "aria-label",
+                    mobileMenuOpen ? "Fechar menu lateral" : "Abrir menu lateral"
+                );
+                return;
+            }
+
+            const hidden = appShell.classList.toggle("sidebar-hidden");
+            window.localStorage.setItem(sidebarStorageKey, String(hidden));
+            toggle.setAttribute("aria-expanded", String(!hidden));
+            toggle.setAttribute(
+                "aria-label",
+                hidden ? "Exibir menu lateral" : "Ocultar menu lateral"
+            );
         });
-        overlay.addEventListener("click", closeMenu);
+        overlay.addEventListener("click", closeMobileMenu);
+        mobileViewport.addEventListener("change", syncMenuForViewport);
+        syncMenuForViewport();
     </script>
 </body>
 </html>

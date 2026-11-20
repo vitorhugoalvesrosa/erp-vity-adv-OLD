@@ -15,7 +15,7 @@
             {% if form.non_field_errors %}<div class="form-error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
             <div class="form-grid">
                 {% for field in form %}
-                    <div class="form-field {% if field.name == 'descricao' or field.name == 'recipients' or field.name == 'message' %}is-wide{% endif %}">
+                    <div class="form-field {% if field.name == 'descricao' or field.name == 'recipients' or field.name == 'message' %}is-wide{% endif %}" id="field-row-{{ field.name }}">
                         {% if field.field.widget.input_type == "checkbox" %}
                             <label class="form-checkbox-row" for="{{ field.id_for_label }}">{{ field }} {{ field.label }}</label>
                         {% else %}
@@ -33,4 +33,16 @@
             </div>
         </form>
     </section>
+    {% if active_module == "produtos" %}
+        <script>
+            const serviceField = document.getElementById("id_eh_servico");
+            const stockField = document.getElementById("field-row-quantidade_estoque");
+            const updateStockField = () => {
+                const isService = serviceField.checked;
+                stockField.hidden = isService;
+            };
+            serviceField.addEventListener("change", updateStockField);
+            updateStockField();
+        </script>
+    {% endif %}
 {% endblock %}

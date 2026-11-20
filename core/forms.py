@@ -60,7 +60,15 @@ class PropostaForm(ERPModelForm):
 class ProdutoForm(ERPModelForm):
     class Meta:
         model = Produto
-        fields = ("nome", "descricao", "sku", "preco", "quantidade_estoque", "ativo")
+        fields = (
+            "nome",
+            "descricao",
+            "sku",
+            "preco",
+            "eh_servico",
+            "quantidade_estoque",
+            "ativo",
+        )
 
 
 class PedidoVendaForm(ERPModelForm):

@@ -28,7 +28,9 @@ python manage.py runserver
 
 Acesse `http://127.0.0.1:8000/` para entrar no sistema. O frontend inclui painel geral e operações de consulta, cadastro, edição e exclusão para CRM, produtos, pedidos e financeiro. Os perfis de gerente e operador usam essa interface conforme suas permissões.
 
-O Django Admin fica em `/admin/` e só pode ser acessado por uma conta superusuária (`admin`). O login e os recursos de negócio ficam no frontend próprio.
+No cadastro de produtos, marque **É um serviço (não controla estoque)** para que a quantidade não seja mantida e apareça como não controlada.
+
+O menu lateral pode ser recolhido e reaberto e lembra a preferência no navegador. A área **Administração**, visível somente para superusuários, reúne atalhos para usuários, grupos/permissões e todos os registros gerenciados pelo Django Admin. O Django Admin fica em `/admin/` e só pode ser acessado por uma conta superusuária (`admin`). O login e os recursos de negócio ficam no frontend próprio.
 
 `create_erp_users` solicita senhas sem exibi-las, valida cada senha e cria ou atualiza as contas `admin`, `gerente` e `operador`. Use senhas fortes e exclusivas; elas não devem ser incluídas no repositório ou na documentação.
 

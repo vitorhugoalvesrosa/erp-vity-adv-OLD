@@ -1,0 +1,59 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+    <header class="page-heading">
+        <div>
+            <p class="eyebrow">CONTROLE DO ERP</p>
+            <h1>Administração</h1>
+            <p>Gerencie usuários, permissões e os registros do sistema.</p>
+        </div>
+        <a class="button" href="{% url 'admin:index' %}">Abrir Django Admin <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <section class="admin-grid" aria-label="Configurações do sistema">
+        <article class="panel admin-card">
+            <span class="admin-card-icon tone-violet">AC</span>
+            <h2>Acessos e permissões</h2>
+            <p>Gerencie contas de usuário, grupos e as permissões de cada perfil.</p>
+            <div class="admin-card-links">
+                <a class="text-link" href="{% url 'admin:auth_user_changelist' %}">Usuários →</a>
+                <a class="text-link" href="{% url 'admin:auth_group_changelist' %}">Grupos e permissões →</a>
+            </div>
+        </article>
+
+        <article class="panel admin-card">
+            <span class="admin-card-icon tone-amber">CRM</span>
+            <h2>CRM e vendas</h2>
+            <p>Administre contas, clientes e propostas comerciais.</p>
+            <div class="admin-card-links">
+                <a class="text-link" href="{% url 'admin:crm_conta_changelist' %}">Contas e clientes →</a>
+                <a class="text-link" href="{% url 'admin:crm_proposta_changelist' %}">Propostas →</a>
+            </div>
+        </article>
+
+        <article class="panel admin-card">
+            <span class="admin-card-icon tone-mint">SKU</span>
+            <h2>Produtos e estoque</h2>
+            <p>Configure o catálogo, os preços e as quantidades disponíveis.</p>
+            <div class="admin-card-links">
+                <a class="text-link" href="{% url 'admin:produtos_produto_changelist' %}">Produtos →</a>
+            </div>
+        </article>
+
+        <article class="panel admin-card">
+            <span class="admin-card-icon tone-blue">R$</span>
+            <h2>Financeiro</h2>
+            <p>Acesse pedidos de venda, recebíveis e pagamentos.</p>
+            <div class="admin-card-links">
+                <a class="text-link" href="{% url 'admin:financeiro_pedidovenda_changelist' %}">Pedidos →</a>
+                <a class="text-link" href="{% url 'admin:financeiro_contareceber_changelist' %}">Contas a receber →</a>
+                <a class="text-link" href="{% url 'admin:financeiro_pagamento_changelist' %}">Pagamentos →</a>
+            </div>
+        </article>
+    </section>
+
+    <aside class="admin-note">
+        <span class="nav-icon">i</span>
+        <p><strong>Configurações do ambiente</strong> — credenciais, SMTP, banco de dados e opções de deploy são gerenciados nas variáveis de ambiente do Render; não são alterados por este painel.</p>
+    </aside>
+{% endblock %}

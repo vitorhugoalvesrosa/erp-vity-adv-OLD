@@ -20,7 +20,14 @@ from core.admin_site import ERPAdminAuthenticationForm, erp_admin_site
 from core.access_control import MANAGER_GROUP, OPERATOR_GROUP, setup_access_groups
 from core.management.commands.bootstrap_erp_users import BOOTSTRAP_NAME
 from core.models import ERPAdminPasswordReset, ERPUserBootstrap
-from core.views import home, record_delete, record_edit, record_list, send_notice
+from core.views import (
+    administration,
+    home,
+    record_delete,
+    record_edit,
+    record_list,
+    send_notice,
+)
 from produtos.models import Produto
 
 
@@ -28,6 +35,7 @@ class HomePageRouteTests(SimpleTestCase):
     def test_homepage_and_module_links_resolve(self):
         routes = {
             "home": "/",
+            "admin-settings": "/administracao/",
             "login": "/login/",
             "admin:login": "/admin/login/",
             "admin_password_reset": "/admin/password_reset/",
@@ -102,11 +110,46 @@ class ApiRolePermissionTests(TestCase):
 
         self.assertEqual(response.status_code, 201)
 
+    def test_service_products_do_not_track_stock(self):
+        self.client.force_authenticate(user=self.manager)
+
+        response = self.client.post(
+            "/api/produtos/",
+            {
+                "nome": "Consultoria",
+                "sku": "SERVICE-001",
+                "preco": "120.00",
+                "eh_servico": True,
+                "quantidade_estoque": 5,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.data["eh_servico"])
+        self.assertEqual(response.data["quantidade_estoque"], 0)
+
     def test_operator_cannot_access_django_admin(self):
         request = RequestFactory().get("/admin/")
         request.user = self.operator
 
         self.assertFalse(erp_admin_site.has_permission(request))
+
+
+class ProductServiceInventoryTests(TestCase):
+    def test_service_stock_is_zero_after_partial_update(self):
+        product = Produto.objects.create(
+            nome="Produto conversível",
+            sku="SERVICE-PARTIAL-001",
+            preco="10.00",
+            quantidade_estoque=7,
+        )
+
+        product.eh_servico = True
+        product.save(update_fields=["eh_servico"])
+        product.refresh_from_db()
+
+        self.assertEqual(product.quantidade_estoque, 0)
 
 
 class ERPUserBootstrapTests(TestCase):
@@ -318,6 +361,13 @@ class FrontendPermissionTests(TestCase):
             preco="14.50",
             quantidade_estoque=3,
         )
+        Produto.objects.create(
+            nome="Serviço no painel",
+            sku="PANEL-SERVICE-001",
+            preco="14.50",
+            eh_servico=True,
+            quantidade_estoque=3,
+        )
 
         dashboard = home(self.request_as("/", self.manager))
         product_list = record_list(
@@ -327,8 +377,12 @@ class FrontendPermissionTests(TestCase):
 
         self.assertEqual(dashboard.status_code, 200)
         self.assertIn("Visão geral", dashboard.content.decode())
+        self.assertIn('id="menu-toggle"', dashboard.content.decode())
+        self.assertNotIn("Administração", dashboard.content.decode())
         self.assertEqual(product_list.status_code, 200)
         self.assertIn("Produto no painel", product_list.content.decode())
+        self.assertIn("Serviço", product_list.content.decode())
+        self.assertIn("Não controlado", product_list.content.decode())
 
     def test_record_form_and_delete_confirmation_render(self):
         product = Produto.objects.create(
@@ -351,7 +405,31 @@ class FrontendPermissionTests(TestCase):
 
         self.assertEqual(form_page.status_code, 200)
         self.assertIn("Novo produto", form_page.content.decode())
+        self.assertIn('id="id_eh_servico"', form_page.content.decode())
+        self.assertIn('id="field-row-quantidade_estoque"', form_page.content.decode())
         self.assertEqual(delete_page.status_code, 200)
+
+    def test_service_product_form_does_not_save_stock_quantity(self):
+        request = self.request_as(
+            "/app/produtos/novo/",
+            self.manager,
+            {
+                "nome": "Consultoria",
+                "descricao": "",
+                "sku": "SERVICE-FORM-001",
+                "preco": "120.00",
+                "eh_servico": "on",
+                "quantidade_estoque": "5",
+                "ativo": "on",
+            },
+        )
+
+        response = record_edit(request, module="produtos")
+
+        self.assertEqual(response.status_code, 302)
+        service = Produto.objects.get(sku="SERVICE-FORM-001")
+        self.assertTrue(service.eh_servico)
+        self.assertEqual(service.quantidade_estoque, 0)
 
     def test_manager_can_render_email_module(self):
         response = send_notice(
@@ -360,6 +438,22 @@ class FrontendPermissionTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Enviar comunicado", response.content.decode())
+
+    def test_only_superuser_can_render_administration_settings(self):
+        manager_request = self.request_as("/administracao/", self.manager)
+        with self.assertRaises(PermissionDenied):
+            administration(manager_request)
+
+        admin_page = administration(
+            self.request_as("/administracao/", self.admin_user),
+        )
+
+        self.assertEqual(admin_page.status_code, 200)
+        content = admin_page.content.decode()
+        self.assertIn("Acessos e permissões", content)
+        self.assertIn("Grupos e permissões", content)
+        self.assertIn("Financeiro", content)
+        self.assertIn("Django Admin", content)
 
     def test_only_superusers_can_open_django_admin(self):
         request = RequestFactory().get("/admin/")

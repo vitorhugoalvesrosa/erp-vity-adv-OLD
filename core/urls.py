@@ -4,6 +4,7 @@ from . import views
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("administracao/", views.administration, name="admin-settings"),
     path("app/<slug:module>/", views.record_list, name="record-list"),
     path("app/<slug:module>/novo/", views.record_edit, name="record-create"),
     path(

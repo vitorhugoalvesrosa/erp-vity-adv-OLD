@@ -6,6 +6,10 @@ class Produto(models.Model):
     descricao = models.TextField(blank=True, default="")
     sku = models.CharField(max_length=100, unique=True)
     preco = models.DecimalField(max_digits=12, decimal_places=2)
+    eh_servico = models.BooleanField(
+        default=False,
+        verbose_name="É um serviço (não controla estoque)",
+    )
     quantidade_estoque = models.IntegerField(default=0)
     ativo = models.BooleanField(default=True)
     data_criacao = models.DateTimeField(auto_now_add=True)
@@ -17,3 +21,13 @@ class Produto(models.Model):
 
     def __str__(self):
         return self.nome
+
+    def save(self, *args, **kwargs):
+        if self.eh_servico:
+            self.quantidade_estoque = 0
+            if kwargs.get("update_fields") is not None:
+                kwargs["update_fields"] = {
+                    *kwargs["update_fields"],
+                    "quantidade_estoque",
+                }
+        super().save(*args, **kwargs)
