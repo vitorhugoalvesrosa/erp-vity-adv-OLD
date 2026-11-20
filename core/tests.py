@@ -536,6 +536,10 @@ class FrontendPermissionTests(TestCase):
         self.assertIn('id="menu-toggle"', dashboard.content.decode())
         self.assertIn('data-menu-group="crm"', dashboard.content.decode())
         self.assertIn('aria-controls="nav-finance"', dashboard.content.decode())
+        self.assertIn(
+            'href="/pdv/" target="_blank" rel="noopener"',
+            dashboard.content.decode(),
+        )
         self.assertNotIn("Administração", dashboard.content.decode())
         self.assertEqual(product_list.status_code, 200)
         self.assertIn("Produto no painel", product_list.content.decode())

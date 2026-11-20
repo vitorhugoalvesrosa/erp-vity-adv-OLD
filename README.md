@@ -59,12 +59,12 @@ O deploy atualiza os grupos e suas permissões após aplicar as migrations.
 - `crm`: contas (leads, negociações e clientes) e propostas comerciais.
 - `produtos`: catálogo, SKU, preços e quantidade em estoque.
 - `financeiro`: pedidos de venda, contas a receber e pagamentos.
-- `pdv`: abertura/fechamento de caixa, movimentações e preparação de vendas com pagamentos divididos.
+- `pdv`: tela independente de caixa, movimentações, vendas com pagamentos divididos e histórico persistido no ERP.
 - `core`: frontend, autenticação, comunicação por e-mail e configuração do projeto Django em `erp_vity`.
 
 As alterações de esquema do banco estão registradas nas migrations de cada aplicação.
 
-O PDV rejeita produtos inativos, valida o estoque de mercadorias e não baixa estoque nem registra pagamento ao salvar uma pré-venda. O fechamento comercial fica bloqueado até a emissão fiscal estar integrada e configurada: NFS-e para serviços e NFC-e para mercadorias. O envio real desses documentos ainda não está disponível; a tela não afirma que uma nota foi emitida.
+O PDV abre em uma nova aba sem a navegação geral do ERP. A operação comercial não depende de cadastro fiscal nem de comunicação com a SEFAZ: ao concluir uma pré-venda, o sistema registra a venda no ERP, atualiza o estoque de mercadorias e o caixa para valores recebidos em dinheiro. Pix e cartões são lançamentos manuais; o sistema não processa transações. A emissão de documentos fiscais permanece pendente e nenhuma NFS-e ou NFC-e é enviada pelo PDV.
 
 ## API
 

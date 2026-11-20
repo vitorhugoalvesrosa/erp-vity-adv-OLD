@@ -241,6 +241,88 @@ def create_draft_sale(register, cashier, lines, tenders, discount_amount, custom
     return sale
 
 
+def complete_sale(sale, user):
+    with transaction.atomic():
+        register = CashRegister.objects.select_for_update().get(
+            pk=sale.register_id,
+        )
+        sale = Sale.objects.select_for_update().get(pk=sale.pk)
+        if sale.status != Sale.Status.DRAFT:
+            raise POSWorkflowError("Somente pré-vendas podem ser concluídas.")
+        if sale.cashier_id != user.pk and not user.has_perm("pdv.delete_sale"):
+            raise POSWorkflowError("Você não pode concluir a venda de outro operador.")
+        if not register.is_open:
+            raise POSWorkflowError("O caixa foi fechado antes de concluir a venda.")
+
+        items = list(sale.items.all().order_by("product_id"))
+        product_ids = {item.product_id for item in items}
+        products = {
+            product.pk: product
+            for product in Produto.objects.select_for_update()
+            .filter(pk__in=product_ids)
+            .order_by("pk")
+        }
+        quantities = {}
+        for item in items:
+            product = products.get(item.product_id)
+            if product is None or not product.ativo:
+                raise POSWorkflowError(
+                    f"O produto {item.product_name} não está mais disponível."
+                )
+            if product.eh_servico != item.is_service:
+                raise POSWorkflowError(
+                    f"A classificação de {item.product_name} mudou; "
+                    "cancele e refaça a pré-venda."
+                )
+            if not item.is_service:
+                quantities[product.pk] = (
+                    quantities.get(product.pk, Decimal("0")) + item.quantity
+                )
+
+        for product_id, quantity in quantities.items():
+            product = products[product_id]
+            if quantity != quantity.to_integral_value():
+                raise POSWorkflowError(
+                    f"A quantidade de {product.nome} deve ser um número inteiro."
+                )
+            if quantity > product.quantidade_estoque:
+                raise POSWorkflowError(
+                    f"Estoque insuficiente para {product.nome}; disponível: "
+                    f"{product.quantidade_estoque}."
+                )
+
+        for product_id, quantity in quantities.items():
+            product = products[product_id]
+            product.quantidade_estoque -= int(quantity)
+            product.save(update_fields=("quantidade_estoque",))
+
+        cash_received = sum(
+            (
+                tender.amount
+                for tender in sale.tenders.all()
+                if tender.method == SaleTender.Method.CASH
+            ),
+            Decimal("0.00"),
+        )
+        if cash_received > 0:
+            CashMovement.objects.create(
+                register=register,
+                direction=CashMovement.Direction.IN,
+                kind=CashMovement.Kind.SALE,
+                amount=cash_received,
+                description=f"Venda PDV #{sale.pk}",
+                created_by=user,
+            )
+
+        sale.status = Sale.Status.COMPLETED
+        sale.fiscal_status = Sale.FiscalStatus.PENDING
+        sale.completed_at = timezone.now()
+        sale.save(
+            update_fields=("status", "fiscal_status", "completed_at"),
+        )
+    return sale
+
+
 def cancel_draft_sale(sale, user, reason):
     reason = reason.strip()
     if not reason:

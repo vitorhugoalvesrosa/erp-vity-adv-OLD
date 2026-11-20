@@ -59,7 +59,7 @@
                         </a>
                     {% endif %}
                     {% if perms.pdv.view_sale %}
-                        <a class="nav-link {% if active_module == 'pdv' %}is-active{% endif %}" href="{% url 'pdv:terminal' %}">
+                        <a class="nav-link {% if active_module == 'pdv' %}is-active{% endif %}" href="{% url 'pdv:terminal' %}" target="_blank" rel="noopener">
                             <span class="nav-icon">PDV</span> Ponto de venda
                         </a>
                     {% endif %}

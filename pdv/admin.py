@@ -39,11 +39,12 @@ class SaleAdmin(admin.ModelAdmin):
         "cashier",
         "customer",
         "status",
+        "fiscal_status",
         "total",
         "created_at",
         "completed_at",
     )
-    list_filter = ("status", "created_at")
+    list_filter = ("status", "fiscal_status", "created_at")
     readonly_fields = tuple(field.name for field in Sale._meta.fields)
 
     def has_add_permission(self, request):

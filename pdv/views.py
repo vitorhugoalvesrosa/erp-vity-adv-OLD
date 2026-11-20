@@ -19,6 +19,7 @@ from .services import (
     POSWorkflowError,
     cancel_draft_sale,
     close_register as close_register_service,
+    complete_sale,
     create_draft_sale,
     expected_cash,
     open_register as open_register_service,
@@ -26,9 +27,10 @@ from .services import (
 )
 
 
-FISCAL_SETUP_MESSAGE = (
-    "O fechamento está bloqueado: emissão de NFS-e para serviços e NFC-e "
-    "para mercadorias ainda não foi integrada e configurada."
+FISCAL_PENDING_MESSAGE = (
+    "O PDV funciona sem cadastro fiscal ou comunicação com a SEFAZ. "
+    "As vendas são registradas no ERP; a emissão de documentos fiscais "
+    "permanece pendente e não é realizada por este módulo."
 )
 
 
@@ -61,6 +63,9 @@ def terminal(request):
                 "items",
                 "tenders",
             ),
+            "completed_sales": register.sales.filter(
+                status=Sale.Status.COMPLETED,
+            ).prefetch_related("items", "tenders")[:10],
             "product_data": [
                 {
                     "sku": product.sku,
@@ -87,6 +92,7 @@ def terminal(request):
             "expected_cash": None,
             "movements": (),
             "draft_sales": (),
+            "completed_sales": (),
             "product_data": (),
             "open_form": RegisterOpenForm(),
             "close_form": None,
@@ -102,7 +108,7 @@ def terminal(request):
         {
             "page_title": "PDV",
             "active_module": "pdv",
-            "fiscal_setup_message": FISCAL_SETUP_MESSAGE,
+            "fiscal_pending_message": FISCAL_PENDING_MESSAGE,
         }
     )
     return render(request, "pdv/terminal.html", context)
@@ -210,9 +216,9 @@ def create_draft(request):
     except POSWorkflowError as exc:
         messages.error(request, str(exc))
     else:
-        messages.warning(
+        messages.success(
             request,
-            f"Pré-venda #{sale.pk} salva. {FISCAL_SETUP_MESSAGE}",
+            f"Pré-venda #{sale.pk} salva. Conclua a venda para registrar pagamento e estoque.",
         )
     return redirect("pdv:terminal")
 
@@ -224,7 +230,16 @@ def finalize_sale(request, pk):
     sale = get_object_or_404(Sale, pk=pk, status=Sale.Status.DRAFT)
     if sale.cashier_id != request.user.pk and not request.user.has_perm("pdv.delete_sale"):
         raise PermissionDenied
-    messages.error(request, FISCAL_SETUP_MESSAGE)
+    try:
+        completed_sale = complete_sale(sale, request.user)
+    except POSWorkflowError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(
+            request,
+            f"Venda #{completed_sale.pk} registrada no ERP. "
+            "Emissão fiscal pendente; nenhum documento fiscal foi emitido.",
+        )
     return redirect("pdv:terminal")
 
 

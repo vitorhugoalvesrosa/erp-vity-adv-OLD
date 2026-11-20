@@ -346,6 +346,14 @@ textarea:focus-visible {
     padding: 34px clamp(24px, 4vw, 56px) 52px;
 }
 
+.pdv-standalone-content {
+    width: min(1600px, 100%);
+}
+
+.pdv-standalone-topbar {
+    padding: 0 clamp(20px, 4vw, 56px);
+}
+
 .page-heading {
     display: flex;
     align-items: flex-end;

@@ -12,6 +12,7 @@ from .services import (
     POSWorkflowError,
     cancel_draft_sale,
     close_register,
+    complete_sale,
     create_draft_sale,
     expected_cash,
     open_register,
@@ -110,7 +111,7 @@ class POSWorkflowTests(TestCase):
         self.assertEqual(expected_cash(register), Decimal("50.00"))
         self.assertEqual(register.movements.count(), 0)
 
-    def test_finalize_endpoint_keeps_sale_draft_until_fiscal_is_configured(self):
+    def test_finalize_endpoint_records_sale_without_fiscal_configuration(self):
         register = open_register(self.operator, "20.00")
         sale = create_draft_sale(
             register=register,
@@ -129,8 +130,57 @@ class POSWorkflowTests(TestCase):
         self.product.refresh_from_db()
         register.refresh_from_db()
         self.assertEqual(response.status_code, 302)
+        self.assertEqual(sale.status, Sale.Status.COMPLETED)
+        self.assertEqual(sale.fiscal_status, Sale.FiscalStatus.PENDING)
+        self.assertEqual(self.product.quantidade_estoque, 4)
+        self.assertEqual(register.movements.count(), 1)
+        self.assertEqual(register.movements.get().kind, CashMovement.Kind.SALE)
+        self.assertEqual(expected_cash(register), Decimal("35.00"))
+
+    def test_completed_mixed_sale_updates_stock_and_records_only_cash_tender(self):
+        register = open_register(self.operator, "50.00")
+        sale = create_draft_sale(
+            register=register,
+            cashier=self.operator,
+            lines=[
+                {"sku": self.product.sku, "quantity": "2"},
+                {"sku": self.service.sku, "quantity": "1.5"},
+            ],
+            tenders=[
+                {"method": SaleTender.Method.CASH, "amount": "20.00"},
+                {"method": SaleTender.Method.PIX, "amount": "150.00"},
+            ],
+            discount_amount="10.00",
+        )
+
+        complete_sale(sale, self.operator)
+
+        self.product.refresh_from_db()
+        self.service.refresh_from_db()
+        self.assertEqual(self.product.quantidade_estoque, 3)
+        self.assertEqual(self.service.quantidade_estoque, 0)
+        self.assertEqual(expected_cash(register), Decimal("70.00"))
+        self.assertEqual(register.movements.count(), 1)
+        self.assertEqual(register.movements.get().amount, Decimal("20.00"))
+
+    def test_completion_rechecks_stock_and_rolls_back_if_inventory_changed(self):
+        register = open_register(self.operator, "20.00")
+        sale = create_draft_sale(
+            register=register,
+            cashier=self.operator,
+            lines=[{"sku": self.product.sku, "quantity": "1"}],
+            tenders=[{"method": SaleTender.Method.CASH, "amount": "15.00"}],
+            discount_amount="0.00",
+        )
+        self.product.quantidade_estoque = 0
+        self.product.save(update_fields=("quantidade_estoque",))
+
+        with self.assertRaisesMessage(POSWorkflowError, "Estoque insuficiente"):
+            complete_sale(sale, self.operator)
+
+        sale.refresh_from_db()
         self.assertEqual(sale.status, Sale.Status.DRAFT)
-        self.assertEqual(self.product.quantidade_estoque, 5)
+        self.assertEqual(sale.fiscal_status, Sale.FiscalStatus.NOT_STARTED)
         self.assertEqual(register.movements.count(), 0)
 
     def test_stock_shortage_rejects_draft_without_creating_sale(self):
@@ -197,7 +247,8 @@ class POSWorkflowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Ponto de venda", response.content.decode())
-        self.assertIn("Fechamento fiscal bloqueado", response.content.decode())
+        self.assertIn("PDV disponível sem emissão fiscal", response.content.decode())
+        self.assertNotIn("nav-workspace", response.content.decode())
         self.assertIn("Abrir caixa", response.content.decode())
 
     def test_terminal_renders_catalog_and_checkout_after_register_open(self):
@@ -210,8 +261,9 @@ class POSWorkflowTests(TestCase):
 
         self.assertIn(self.product.sku, content)
         self.assertIn("SKU-CONSULTORIA", content)
-        self.assertIn("Formas de pagamento planejadas", content)
+        self.assertIn("Formas de pagamento", content)
         self.assertIn("Salvar pré-venda", content)
+        self.assertIn("Vendas recentes", content)
 
     def test_anonymous_user_is_redirected_from_terminal(self):
         response = self.client.get(reverse("pdv:terminal"))

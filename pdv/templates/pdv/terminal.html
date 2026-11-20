@@ -1,11 +1,40 @@
-{% extends "core/base.html" %}
-
-{% block content %}
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f6fb">
+    <title>PDV | ERP Vity</title>
+    <link rel="stylesheet" href="{% static 'core/app.css' %}">
+</head>
+<body>
+    <header class="topbar pdv-standalone-topbar">
+        <div class="topbar-title">
+            <span>ERP Vity / operação</span>
+            <strong>Ponto de venda</strong>
+        </div>
+        <div class="topbar-actions">
+            <span class="topbar-date">{{ request.user.get_full_name|default:request.user.username }}</span>
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button class="logout-button" type="submit">Sair</button>
+            </form>
+        </div>
+    </header>
+    <main class="content pdv-standalone-content">
+        {% if messages %}
+            <div class="messages" role="status">
+                {% for message in messages %}
+                    <div class="message {% if message.tags %}{{ message.tags }}{% endif %}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
     <header class="page-heading">
         <div>
             <p class="eyebrow">OPERAÇÃO</p>
             <h1>Ponto de venda</h1>
-            <p>Prepare vendas, registre movimentações e acompanhe o caixa.</p>
+            <p>Registre vendas no ERP, controle o caixa e acompanhe o estoque.</p>
         </div>
         {% if register %}
             <span class="status-pill status-open">Caixa aberto</span>
@@ -13,7 +42,7 @@
     </header>
 
     <div class="alert-strip" role="status">
-        <span><strong>Fechamento fiscal bloqueado.</strong> {{ fiscal_setup_message }} A pré-venda não altera estoque nem registra recebimento.</span>
+        <span><strong>PDV disponível sem emissão fiscal.</strong> {{ fiscal_pending_message }}</span>
     </div>
 
     {% if not register %}
@@ -62,7 +91,7 @@
             <section class="panel pdv-sale-panel">
                 <div class="panel-header">
                     <div>
-                        <h2>Nova pré-venda</h2>
+                        <h2>Nova venda</h2>
                         <p>Leia o SKU com o scanner ou digite o código e a quantidade.</p>
                     </div>
                 </div>
@@ -123,7 +152,7 @@
 
                             <div class="pdv-payment-section">
                                 <div class="pdv-section-heading">
-                                    <div><h3>Formas de pagamento planejadas</h3><p>Permite dividir o valor entre métodos; nada será cobrado até a emissão fiscal estar ativa.</p></div>
+                                    <div><h3>Formas de pagamento</h3><p>Informe os valores recebidos. Pix e cartões são lançamentos manuais; o sistema não processa transações eletrônicas.</p></div>
                                     <button class="button button-secondary" id="pdv-add-payment" type="button">Adicionar forma</button>
                                 </div>
                                 <div id="pdv-payments">
@@ -191,7 +220,7 @@
 
                 <section class="panel pdv-close-panel">
                     <div class="panel-header">
-                        <div><h2>Fechar caixa</h2><p>O fechamento de vendas permanece bloqueado pela integração fiscal.</p></div>
+                        <div><h2>Fechar caixa</h2><p>Confira o dinheiro físico; vendas em dinheiro entram no saldo esperado.</p></div>
                     </div>
                     <div class="pdv-panel-body">
                         {% if can_close %}
@@ -211,7 +240,7 @@
 
         <section class="panel pdv-drafts-panel">
             <div class="panel-header">
-                <div><h2>Pré-vendas em aberto</h2><p>Rascunhos ainda não cobrados nem baixados do estoque.</p></div>
+                <div><h2>Pré-vendas em aberto</h2><p>Conclua para registrar a venda, o pagamento informado e a baixa de estoque.</p></div>
             </div>
             <div class="table-wrap">
                 <table class="data-table">
@@ -229,7 +258,7 @@
                                         {% if can_create_sale %}
                                             <form method="post" action="{% url 'pdv:finalize-sale' sale.pk %}">
                                                 {% csrf_token %}
-                                                <button class="button button-disabled" type="submit" disabled title="{{ fiscal_setup_message }}">Fechar venda</button>
+                                                <button class="button" type="submit">Concluir venda</button>
                                             </form>
                                         {% endif %}
                                         {% if can_cancel_any or sale.cashier_id == request.user.id %}
@@ -244,6 +273,30 @@
                             </tr>
                         {% empty %}
                             <tr><td colspan="6"><div class="empty-state"><strong>Nenhuma pré-venda em aberto</strong><p>Os rascunhos preparados aparecerão aqui.</p></div></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <section class="panel pdv-drafts-panel">
+            <div class="panel-header">
+                <div><h2>Vendas recentes</h2><p>Vendas concluídas ficam salvas no ERP. A emissão fiscal aparece como pendente enquanto não houver integração.</p></div>
+            </div>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead><tr><th>Nº</th><th>Concluída</th><th>Itens</th><th>Pagamento</th><th>Total</th><th>Fiscal</th></tr></thead>
+                    <tbody>
+                        {% for sale in completed_sales %}
+                            <tr>
+                                <td>#{{ sale.pk }}</td>
+                                <td>{{ sale.completed_at|date:"d/m/Y H:i" }}</td>
+                                <td>{% for item in sale.items.all %}{{ item.quantity }} × {{ item.product_name }}{% if not forloop.last %}; {% endif %}{% endfor %}</td>
+                                <td>{% for tender in sale.tenders.all %}{{ tender.get_method_display }} R$ {{ tender.amount|floatformat:2 }}{% if not forloop.last %}; {% endif %}{% endfor %}</td>
+                                <td>R$ {{ sale.total|floatformat:2 }}</td>
+                                <td>{{ sale.get_fiscal_status_display }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="6"><div class="empty-state"><strong>Nenhuma venda concluída</strong><p>As vendas finalizadas deste caixa aparecerão aqui.</p></div></td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -415,4 +468,6 @@
             );
         });
     </script>
-{% endblock %}
+</main>
+</body>
+</html>

@@ -96,6 +96,12 @@ class Sale(models.Model):
         COMPLETED = "completed", "Concluída"
         CANCELLED = "cancelled", "Cancelada"
 
+    class FiscalStatus(models.TextChoices):
+        NOT_STARTED = "not_started", "Não iniciada"
+        PENDING = "pending", "Pendente"
+        ISSUED = "issued", "Emitida"
+        ERROR = "error", "Com erro"
+
     register = models.ForeignKey(
         CashRegister,
         on_delete=models.PROTECT,
@@ -117,6 +123,12 @@ class Sale(models.Model):
         max_length=12,
         choices=Status.choices,
         default=Status.DRAFT,
+    )
+    fiscal_status = models.CharField(
+        "Situação fiscal",
+        max_length=16,
+        choices=FiscalStatus.choices,
+        default=FiscalStatus.NOT_STARTED,
     )
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
