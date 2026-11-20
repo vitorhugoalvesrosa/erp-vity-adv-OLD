@@ -75,6 +75,7 @@ textarea:focus-visible {
         radial-gradient(circle at 8% 0, rgb(105 112 226 / 22%), transparent 17rem),
         var(--navy);
     color: #fff;
+    overflow-y: auto;
     transition: transform 180ms ease;
 }
 
@@ -126,10 +127,38 @@ textarea:focus-visible {
     text-transform: uppercase;
 }
 
+.nav-group-toggle {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+}
+
+.nav-group-toggle:hover {
+    color: #c2c9df;
+}
+
+.nav-group-indicator {
+    font-size: .85rem;
+    transition: transform 150ms ease;
+}
+
+.nav-group-toggle[aria-expanded="false"] .nav-group-indicator {
+    transform: rotate(-90deg);
+}
+
 .sidebar-nav {
     display: grid;
     gap: 5px;
     margin: 11px 0 24px;
+}
+
+.sidebar-nav[hidden] {
+    display: none;
 }
 
 .nav-link {

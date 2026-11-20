@@ -378,6 +378,8 @@ class FrontendPermissionTests(TestCase):
         self.assertEqual(dashboard.status_code, 200)
         self.assertIn("Visão geral", dashboard.content.decode())
         self.assertIn('id="menu-toggle"', dashboard.content.decode())
+        self.assertIn('data-menu-group="crm"', dashboard.content.decode())
+        self.assertIn('aria-controls="nav-finance"', dashboard.content.decode())
         self.assertNotIn("Administração", dashboard.content.decode())
         self.assertEqual(product_list.status_code, 200)
         self.assertIn("Produto no painel", product_list.content.decode())

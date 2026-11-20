@@ -16,16 +16,20 @@
                 <span class="brand-copy">ERP Vity<small>Gestão integrada</small></span>
             </a>
 
-            <span class="nav-label">Workspace</span>
-            <nav class="sidebar-nav" aria-label="Navegação principal">
+            <button class="nav-label nav-group-toggle" type="button" data-menu-group="workspace" aria-expanded="true" aria-controls="nav-workspace">
+                <span>Workspace</span><span class="nav-group-indicator" aria-hidden="true">⌄</span>
+            </button>
+            <nav class="sidebar-nav" id="nav-workspace" aria-label="Navegação principal">
                 <a class="nav-link {% if active_module == 'dashboard' %}is-active{% endif %}" href="{% url 'home' %}">
                     <span class="nav-icon">OV</span> Visão geral
                 </a>
             </nav>
 
             {% if perms.crm.view_conta or perms.crm.view_proposta %}
-                <span class="nav-label">CRM e vendas</span>
-                <nav class="sidebar-nav" aria-label="CRM e vendas">
+                <button class="nav-label nav-group-toggle" type="button" data-menu-group="crm" aria-expanded="true" aria-controls="nav-crm">
+                    <span>CRM e vendas</span><span class="nav-group-indicator" aria-hidden="true">⌄</span>
+                </button>
+                <nav class="sidebar-nav" id="nav-crm" aria-label="CRM e vendas">
                     {% if perms.crm.view_conta %}
                         <a class="nav-link {% if active_module == 'contas' %}is-active{% endif %}" href="{% url 'record-list' module='contas' %}">
                             <span class="nav-icon">CRM</span> Contas e clientes
@@ -40,8 +44,10 @@
             {% endif %}
 
             {% if perms.produtos.view_produto or perms.financeiro.view_pedidovenda %}
-                <span class="nav-label">Operação</span>
-                <nav class="sidebar-nav" aria-label="Operação">
+                <button class="nav-label nav-group-toggle" type="button" data-menu-group="operations" aria-expanded="true" aria-controls="nav-operations">
+                    <span>Operação</span><span class="nav-group-indicator" aria-hidden="true">⌄</span>
+                </button>
+                <nav class="sidebar-nav" id="nav-operations" aria-label="Operação">
                     {% if perms.produtos.view_produto %}
                         <a class="nav-link {% if active_module == 'produtos' %}is-active{% endif %}" href="{% url 'record-list' module='produtos' %}">
                             <span class="nav-icon">SKU</span> Produtos e estoque
@@ -56,8 +62,10 @@
             {% endif %}
 
             {% if perms.financeiro.view_contareceber or perms.financeiro.view_pagamento %}
-                <span class="nav-label">Financeiro</span>
-                <nav class="sidebar-nav" aria-label="Financeiro">
+                <button class="nav-label nav-group-toggle" type="button" data-menu-group="finance" aria-expanded="true" aria-controls="nav-finance">
+                    <span>Financeiro</span><span class="nav-group-indicator" aria-hidden="true">⌄</span>
+                </button>
+                <nav class="sidebar-nav" id="nav-finance" aria-label="Financeiro">
                     {% if perms.financeiro.view_contareceber %}
                         <a class="nav-link {% if active_module == 'recebiveis' %}is-active{% endif %}" href="{% url 'record-list' module='recebiveis' %}">
                             <span class="nav-icon">R$</span> Contas a receber
@@ -72,8 +80,10 @@
             {% endif %}
 
             {% if user.is_superuser or perms.auth.change_user %}
-                <span class="nav-label">Comunicação</span>
-                <nav class="sidebar-nav" aria-label="Comunicação">
+                <button class="nav-label nav-group-toggle" type="button" data-menu-group="communication" aria-expanded="true" aria-controls="nav-communication">
+                    <span>Comunicação</span><span class="nav-group-indicator" aria-hidden="true">⌄</span>
+                </button>
+                <nav class="sidebar-nav" id="nav-communication" aria-label="Comunicação">
                     <a class="nav-link {% if active_module == 'email' %}is-active{% endif %}" href="{% url 'send-email-notice' %}">
                         <span class="nav-icon">@</span> E-mails
                     </a>
@@ -82,8 +92,10 @@
 
             <div class="sidebar-spacer"></div>
             {% if user.is_superuser %}
-                <span class="nav-label">Administração</span>
-                <nav class="sidebar-nav" aria-label="Administração">
+                <button class="nav-label nav-group-toggle" type="button" data-menu-group="administration" aria-expanded="true" aria-controls="nav-administration">
+                    <span>Administração</span><span class="nav-group-indicator" aria-hidden="true">⌄</span>
+                </button>
+                <nav class="sidebar-nav" id="nav-administration" aria-label="Administração">
                     <a class="nav-link {% if active_module == 'administration' %}is-active{% endif %}" href="{% url 'admin-settings' %}">
                         <span class="nav-icon">AD</span> Configurações
                     </a>
@@ -135,6 +147,24 @@
         const mobileViewport = window.matchMedia("(max-width: 800px)");
         const sidebarStorageKey = "erp-vity-sidebar-hidden";
         let mobileMenuOpen = false;
+        document.querySelectorAll("[data-menu-group]").forEach((groupToggle) => {
+            const groupNav = document.getElementById(
+                groupToggle.getAttribute("aria-controls")
+            );
+            const storageKey = `erp-vity-menu-group-${groupToggle.dataset.menuGroup}`;
+            const activeLink = groupNav.querySelector(".nav-link.is-active");
+            const savedState = window.localStorage.getItem(storageKey);
+            const expanded = activeLink !== null || savedState !== "false";
+            groupToggle.setAttribute("aria-expanded", String(expanded));
+            groupNav.hidden = !expanded;
+            groupToggle.addEventListener("click", () => {
+                const nextExpanded =
+                    groupToggle.getAttribute("aria-expanded") !== "true";
+                groupToggle.setAttribute("aria-expanded", String(nextExpanded));
+                groupNav.hidden = !nextExpanded;
+                window.localStorage.setItem(storageKey, String(nextExpanded));
+            });
+        });
         if (window.localStorage.getItem(sidebarStorageKey) === "true") {
             appShell.classList.add("sidebar-hidden");
         }
