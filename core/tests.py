@@ -3,9 +3,10 @@ import secrets
 from io import StringIO
 from unittest.mock import patch
 
+from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
 from rest_framework.test import APIClient
 
 from core.access_control import MANAGER_GROUP, OPERATOR_GROUP, setup_access_groups
@@ -65,6 +66,16 @@ class ApiRolePermissionTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 201)
+
+    def test_operator_can_view_products_in_admin_but_not_edit_them(self):
+        model_admin = admin.site._registry[Produto]
+        request = RequestFactory().get("/admin/produtos/produto/")
+        request.user = self.operator
+
+        self.assertTrue(model_admin.has_view_permission(request))
+        self.assertFalse(model_admin.has_add_permission(request))
+        self.assertFalse(model_admin.has_change_permission(request, self.product))
+        self.assertFalse(model_admin.has_delete_permission(request, self.product))
 
 
 class ERPUserBootstrapTests(TestCase):

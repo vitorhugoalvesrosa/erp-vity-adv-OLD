@@ -26,7 +26,7 @@ python manage.py create_erp_users
 python manage.py runserver
 ```
 
-O painel administrativo fica em `http://127.0.0.1:8000/admin/`.
+O painel administrativo fica em `http://127.0.0.1:8000/admin/` e permite gerenciar os dados de CRM, produtos e financeiro conforme o perfil de acesso.
 
 `create_erp_users` solicita senhas sem exibi-las, valida cada senha e cria ou atualiza as contas `admin`, `gerente` e `operador`. Use senhas fortes e exclusivas; elas não devem ser incluídas no repositório ou na documentação.
 
