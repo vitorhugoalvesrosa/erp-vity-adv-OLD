@@ -57,6 +57,6 @@ Configure `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` ou `FRONTEND_URL` no `.
 
 ## Deploy no Render
 
-O arquivo `render.yaml` configura o Web Service e o PostgreSQL. Conecte o repositório ao Render e crie os recursos pelo Blueprint; o serviço instala `requirements.txt`, executa as migrations ao iniciar e inicia o Gunicorn.
+O arquivo `render.yaml` configura o Web Service e o PostgreSQL. Conecte o repositório ao Render e crie os recursos pelo Blueprint; o serviço instala `requirements.txt`, coleta os arquivos estáticos com WhiteNoise, executa as migrations ao iniciar e inicia o Gunicorn.
 
 O Render fornece `DATABASE_URL` e gera `SECRET_KEY`. A configuração define `DEBUG=False` e redirecionamento HTTPS. O host externo é permitido via `RENDER_EXTERNAL_HOSTNAME`. Não publique arquivos `.env` ou credenciais; mantenha as variáveis secretas na configuração do ambiente do Render.
