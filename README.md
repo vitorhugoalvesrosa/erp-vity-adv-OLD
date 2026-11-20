@@ -34,6 +34,12 @@ No plano Free do Render, o comando interativo não pode ser executado pelo Shell
 
 Se precisar redefinir a senha de `admin` depois do bootstrap, configure `ERP_BOOTSTRAP_ADMIN_PASSWORD` com a nova senha e `ERP_ADMIN_PASSWORD_RESET_TOKEN` com um token aleatório de pelo menos 32 caracteres. Após o deploy concluir, remova as duas variáveis. O token é registrado como usado e não redefinirá a senha novamente em reinícios.
 
+## E-mail
+
+Configure o serviço SMTP nas variáveis de ambiente do ambiente (ou no `.env` local): `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` e `DEFAULT_FROM_EMAIL`. Para Gmail ou Outlook, use uma senha de aplicativo quando exigida pelo provedor; nunca coloque credenciais no repositório. Use `EMAIL_USE_TLS=True` na porta 587 ou `EMAIL_USE_SSL=True` na porta 465, sem ativar as duas opções ao mesmo tempo.
+
+O link **Esqueci minha senha** na página inicial envia um link de uso único para o endereço cadastrado no usuário. Administradores e gerentes também podem enviar comunicados aos usuários ativos com e-mail cadastrado pelo módulo **Comunicação por e-mail** na página inicial. Cadastre e mantenha os endereços em Usuários no painel administrativo.
+
 ## Perfis de acesso
 
 - `admin`: superusuário com acesso total.

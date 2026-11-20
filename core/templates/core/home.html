@@ -505,6 +505,7 @@
                     <div class="actions">
                         <a class="button button-primary" href="{% url 'admin:login' %}">Acessar o sistema</a>
                         <a class="button button-secondary" href="#modulos">Conhecer módulos</a>
+                        <a class="button button-secondary" href="{% url 'admin_password_reset' %}">Esqueci minha senha</a>
                     </div>
                 </div>
 
@@ -572,6 +573,16 @@
                             <a href="{% url 'admin:financeiro_pagamento_changelist' %}">Pagamentos</a>
                         </div>
                     </article>
+                    {% if user.is_superuser or perms.auth.change_user %}
+                        <article class="module-card">
+                            <span class="module-icon" aria-hidden="true">04</span>
+                            <h3>Comunicação por e-mail</h3>
+                            <p>Envie comunicados para usuários ativos com e-mail cadastrado.</p>
+                            <div class="module-link">
+                                <a href="{% url 'send-email-notice' %}">Enviar comunicado</a>
+                            </div>
+                        </article>
+                    {% endif %}
                 </div>
             </section>
         </main>

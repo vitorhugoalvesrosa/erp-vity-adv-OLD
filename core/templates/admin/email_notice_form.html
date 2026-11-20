@@ -1,0 +1,33 @@
+{% extends "admin/base_site.html" %}
+
+{% block title %}Enviar comunicado por e-mail | ERP Vity{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <h1>Enviar comunicado por e-mail</h1>
+    <p>O comunicado será enviado como cópia oculta aos usuários selecionados.</p>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="form-row">
+            {{ form.recipients.errors }}
+            {{ form.recipients.label_tag }}
+            {{ form.recipients }}
+            {{ form.recipients.help_text }}
+        </div>
+        <div class="form-row">
+            {{ form.subject.errors }}
+            {{ form.subject.label_tag }}
+            {{ form.subject }}
+        </div>
+        <div class="form-row">
+            {{ form.message.errors }}
+            {{ form.message.label_tag }}
+            {{ form.message }}
+        </div>
+        <div class="submit-row">
+            <input type="submit" value="Enviar comunicado" class="default">
+        </div>
+    </form>
+</div>
+{% endblock %}

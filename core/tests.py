@@ -5,14 +5,18 @@ from unittest.mock import patch
 
 from django.contrib import admin
 from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import PasswordResetForm
+from django.core import mail
 from django.core.management import call_command
+from django.http import HttpResponse
 from django.urls import reverse
-from django.test import RequestFactory, SimpleTestCase, TestCase
+from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from rest_framework.test import APIClient
 
 from core.access_control import MANAGER_GROUP, OPERATOR_GROUP, setup_access_groups
 from core.management.commands.bootstrap_erp_users import BOOTSTRAP_NAME
 from core.models import ERPAdminPasswordReset, ERPUserBootstrap
+from core.views import send_notice
 from produtos.models import Produto
 
 
@@ -21,6 +25,8 @@ class HomePageRouteTests(SimpleTestCase):
         routes = {
             "home": "/",
             "admin:login": "/admin/login/",
+            "admin_password_reset": "/admin/password_reset/",
+            "send-email-notice": "/emails/enviar/",
             "admin:crm_conta_changelist": "/admin/crm/conta/",
             "admin:crm_proposta_changelist": "/admin/crm/proposta/",
             "admin:produtos_produto_changelist": "/admin/produtos/produto/",
@@ -169,3 +175,78 @@ class ERPAdminPasswordResetTests(TestCase):
 
         admin.refresh_from_db()
         self.assertTrue(admin.check_password(password))
+
+
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    EMAIL_HOST="smtp.example.com",
+    DEFAULT_FROM_EMAIL="erp@example.com",
+)
+class EmailModuleTests(TestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.admin_user = user_model.objects.create_superuser(
+            username="mail-admin",
+            email="admin@example.com",
+            password="test-password",
+        )
+        self.recipient = user_model.objects.create_user(
+            username="mail-recipient",
+            email="recipient@example.com",
+            password="test-password",
+        )
+
+    def test_password_reset_request_sends_one_time_link(self):
+        form = PasswordResetForm(data={"email": self.recipient.email})
+        self.assertTrue(form.is_valid())
+        form.save(
+            domain_override="testserver",
+            subject_template_name="registration/password_reset_subject.txt",
+            email_template_name="registration/password_reset_email.html",
+        )
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [self.recipient.email])
+        self.assertIn("/reset/", mail.outbox[0].body)
+
+    def test_admin_can_send_notice_without_exposing_recipient_addresses(self):
+        request = RequestFactory().post(
+            reverse("send-email-notice"),
+            {
+                "recipients": [str(self.recipient.pk)],
+                "subject": "Informação importante",
+                "message": "Atualização do ERP.",
+            },
+        )
+        request.user = self.admin_user
+        with patch(
+            "core.views.render",
+            side_effect=lambda request, template, context: HttpResponse(
+                str(context["form"].errors)
+            ),
+        ) as render:
+            with patch("core.views.messages.success"):
+                response = send_notice(request)
+
+        self.assertFalse(render.called, response.content.decode())
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("send-email-notice"))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["erp@example.com"])
+        self.assertEqual(mail.outbox[0].bcc, [self.recipient.email])
+        self.assertEqual(mail.outbox[0].body, "Atualização do ERP.")
+
+    def test_operator_cannot_send_notices(self):
+        operator = get_user_model().objects.create_user(
+            username="mail-operator",
+            email="operator@example.com",
+            password="test-password",
+            is_staff=True,
+        )
+        operator.groups.add(setup_access_groups()[OPERATOR_GROUP])
+        self.client.force_login(operator)
+
+        response = self.client.get(reverse("send-email-notice"))
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(mail.outbox, [])
