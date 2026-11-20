@@ -1,11 +1,22 @@
-from django.contrib import admin
 from django.urls import include, path
 from django.contrib.auth import views as auth_views
+from django.contrib.auth.views import LoginView, LogoutView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
 
-from core.views import ERPPasswordResetView
+from core.admin_site import erp_admin_site
+from core.forms import ERPAuthenticationForm
+from core.views import ERPPasswordResetConfirmView, ERPPasswordResetView
 
 urlpatterns = [
+    path(
+        "login/",
+        LoginView.as_view(
+            authentication_form=ERPAuthenticationForm,
+            template_name="core/login.html",
+        ),
+        name="login",
+    ),
+    path("logout/", LogoutView.as_view(), name="logout"),
     path(
         "admin/password_reset/",
         ERPPasswordResetView.as_view(),
@@ -13,20 +24,24 @@ urlpatterns = [
     ),
     path(
         "admin/password_reset/done/",
-        auth_views.PasswordResetDoneView.as_view(),
+        auth_views.PasswordResetDoneView.as_view(
+            template_name="core/auth/password_reset_done.html",
+        ),
         name="password_reset_done",
     ),
     path(
         "reset/<uidb64>/<token>/",
-        auth_views.PasswordResetConfirmView.as_view(),
+        ERPPasswordResetConfirmView.as_view(),
         name="password_reset_confirm",
     ),
     path(
         "reset/done/",
-        auth_views.PasswordResetCompleteView.as_view(),
+        auth_views.PasswordResetCompleteView.as_view(
+            template_name="core/auth/password_reset_complete.html",
+        ),
         name="password_reset_complete",
     ),
-    path("admin/", admin.site.urls),
+    path("admin/", erp_admin_site.urls),
     path("", include("core.urls")),
     path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),

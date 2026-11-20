@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+    <header class="page-heading">
+        <div>
+            <p class="eyebrow">{{ module.title }}</p>
+            <h1>Excluir {{ module.singular }}</h1>
+            <p>Essa ação não pode ser desfeita.</p>
+        </div>
+    </header>
+    <section class="panel delete-card">
+        <h2>Confirmar exclusão?</h2>
+        <p>O registro <strong>{{ instance }}</strong> será removido permanentemente. Registros relacionados também podem ser excluídos.</p>
+        <form method="post" class="form-actions">
+            {% csrf_token %}
+            <a class="button button-secondary" href="{% url 'record-list' module=active_module %}">Manter registro</a>
+            <button class="button button-danger" type="submit">Sim, excluir</button>
+        </form>
+    </section>
+{% endblock %}

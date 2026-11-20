@@ -1,0 +1,38 @@
+{% extends "core/auth_base.html" %}
+
+{% block title %}Entrar | ERP Vity{% endblock %}
+
+{% block auth_content %}
+    <p class="eyebrow">Bem-vindo de volta</p>
+    <h2>Acesse sua conta</h2>
+    <p>Entre para acompanhar sua operação em um só lugar.</p>
+
+    {% if form.non_field_errors %}
+        <div class="form-error" role="alert">{{ form.non_field_errors }}</div>
+    {% endif %}
+    {% if form.errors and not form.non_field_errors %}
+        <div class="form-error" role="alert">Confira seu usuário e senha e tente novamente.</div>
+    {% endif %}
+
+    <form class="auth-form" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+        <div class="form-field">
+            <label for="{{ form.username.id_for_label }}">Usuário</label>
+            {{ form.username }}
+            {{ form.username.errors }}
+        </div>
+        <div class="form-field">
+            <label for="{{ form.password.id_for_label }}">Senha</label>
+            {{ form.password }}
+            {{ form.password.errors }}
+        </div>
+        <button class="button" type="submit">Entrar no ERP <span aria-hidden="true">→</span></button>
+    </form>
+
+    <div class="auth-links">
+        <span>Acesso protegido</span>
+        <a href="{% url 'admin_password_reset' %}">Esqueci minha senha</a>
+    </div>
+    <p class="auth-footer">ERP Vity · Gestão simples para o dia a dia.</p>
+{% endblock %}

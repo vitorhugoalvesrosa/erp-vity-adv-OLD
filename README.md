@@ -1,6 +1,6 @@
 # ERP Vity
 
-Aplicação ERP em Django com API REST para CRM, produtos e financeiro, além do painel administrativo.
+ERP Vity com interface web em Django, API REST para CRM, produtos e financeiro, e painel administrativo restrito.
 
 ## Requisitos
 
@@ -26,7 +26,9 @@ python manage.py create_erp_users
 python manage.py runserver
 ```
 
-O painel administrativo fica em `http://127.0.0.1:8000/admin/` e permite gerenciar os dados de CRM, produtos e financeiro conforme o perfil de acesso.
+Acesse `http://127.0.0.1:8000/` para entrar no sistema. O frontend inclui painel geral e operações de consulta, cadastro, edição e exclusão para CRM, produtos, pedidos e financeiro. Os perfis de gerente e operador usam essa interface conforme suas permissões.
+
+O Django Admin fica em `/admin/` e só pode ser acessado por uma conta superusuária (`admin`). O login e os recursos de negócio ficam no frontend próprio.
 
 `create_erp_users` solicita senhas sem exibi-las, valida cada senha e cria ou atualiza as contas `admin`, `gerente` e `operador`. Use senhas fortes e exclusivas; elas não devem ser incluídas no repositório ou na documentação.
 
@@ -38,13 +40,13 @@ Se precisar redefinir a senha de `admin` depois do bootstrap, configure `ERP_BOO
 
 Configure o serviço SMTP nas variáveis de ambiente do ambiente (ou no `.env` local): `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` e `DEFAULT_FROM_EMAIL`. Para Gmail ou Outlook, use uma senha de aplicativo quando exigida pelo provedor; nunca coloque credenciais no repositório. Use `EMAIL_USE_TLS=True` na porta 587 ou `EMAIL_USE_SSL=True` na porta 465, sem ativar as duas opções ao mesmo tempo.
 
-O link **Esqueci minha senha** na página inicial envia um link de uso único para o endereço cadastrado no usuário. Administradores e gerentes também podem enviar comunicados aos usuários ativos com e-mail cadastrado pelo módulo **Comunicação por e-mail** na página inicial. Cadastre e mantenha os endereços em Usuários no painel administrativo.
+O link **Esqueci minha senha** na tela de login envia um link de uso único para o endereço cadastrado no usuário. Administradores e gerentes também podem enviar comunicados aos usuários ativos com e-mail cadastrado pelo módulo **E-mails** no menu lateral. Cadastre e mantenha os endereços em Usuários no Django Admin.
 
 ## Perfis de acesso
 
 - `admin`: superusuário com acesso total.
-- `gerente`: acesso total às permissões do Django e aos recursos da API.
-- `operador`: somente leitura nos recursos de CRM, produtos e financeiro, sem permissões de escrita ou gestão de usuários.
+- `gerente`: acesso de leitura e escrita aos módulos do ERP e à API, sem acesso ao Django Admin.
+- `operador`: somente leitura nos módulos de CRM, produtos e financeiro, sem permissões de escrita ou gestão de usuários.
 
 O deploy atualiza os grupos e suas permissões após aplicar as migrations.
 
@@ -53,7 +55,7 @@ O deploy atualiza os grupos e suas permissões após aplicar as migrations.
 - `crm`: contas (leads, negociações e clientes) e propostas comerciais.
 - `produtos`: catálogo, SKU, preços e quantidade em estoque.
 - `financeiro`: pedidos de venda, contas a receber e pagamentos.
-- `core`: página inicial e configuração do projeto Django em `erp_vity`.
+- `core`: frontend, autenticação, comunicação por e-mail e configuração do projeto Django em `erp_vity`.
 
 As alterações de esquema do banco estão registradas nas migrations de cada aplicação.
 

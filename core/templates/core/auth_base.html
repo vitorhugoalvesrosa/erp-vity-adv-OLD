@@ -1,0 +1,34 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f4f6fb">
+    <title>{% block title %}ERP Vity{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'core/app.css' %}">
+</head>
+<body class="auth-page">
+    <main class="auth-shell">
+        <section class="auth-visual" aria-label="ERP Vity">
+            <a class="brand" href="{% url 'login' %}">
+                <span class="brand-mark" aria-hidden="true">V</span>
+                <span class="brand-copy">ERP Vity<small>Gestão integrada</small></span>
+            </a>
+            <div class="auth-message">
+                <p class="eyebrow">Tudo conectado</p>
+                <h1>Sua operação,<br><span>no ritmo certo.</span></h1>
+                <p>Clientes, produtos e financeiro em uma experiência simples para cuidar do que faz seu negócio avançar.</p>
+            </div>
+            <div class="auth-points" aria-label="Módulos disponíveis">
+                <span class="auth-point">CRM e vendas</span>
+                <span class="auth-point">Produtos e estoque</span>
+                <span class="auth-point">Financeiro</span>
+            </div>
+        </section>
+        <section class="auth-form-panel">
+            {% block auth_content %}{% endblock %}
+        </section>
+    </main>
+</body>
+</html>

@@ -1,9 +1,10 @@
 from django.contrib import admin
 
+from core.admin_site import erp_admin_site
 from .models import Produto
 
 
-@admin.register(Produto)
+@admin.register(Produto, site=erp_admin_site)
 class ProdutoAdmin(admin.ModelAdmin):
     list_display = (
         "nome",

@@ -3,20 +3,24 @@ import secrets
 from io import StringIO
 from unittest.mock import patch
 
-from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import PasswordResetForm
+from django.contrib.auth.models import AnonymousUser
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core import mail
+from django.core.exceptions import PermissionDenied
 from django.core.management import call_command
 from django.http import HttpResponse
-from django.urls import reverse
+from django.urls import resolve, reverse
 from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from rest_framework.test import APIClient
 
+from crm.models import Conta
+from core.admin_site import ERPAdminAuthenticationForm, erp_admin_site
 from core.access_control import MANAGER_GROUP, OPERATOR_GROUP, setup_access_groups
 from core.management.commands.bootstrap_erp_users import BOOTSTRAP_NAME
 from core.models import ERPAdminPasswordReset, ERPUserBootstrap
-from core.views import send_notice
+from core.views import home, record_delete, record_edit, record_list, send_notice
 from produtos.models import Produto
 
 
@@ -24,6 +28,7 @@ class HomePageRouteTests(SimpleTestCase):
     def test_homepage_and_module_links_resolve(self):
         routes = {
             "home": "/",
+            "login": "/login/",
             "admin:login": "/admin/login/",
             "admin_password_reset": "/admin/password_reset/",
             "send-email-notice": "/emails/enviar/",
@@ -38,6 +43,11 @@ class HomePageRouteTests(SimpleTestCase):
         for name, path in routes.items():
             with self.subTest(route=name):
                 self.assertEqual(reverse(name), path)
+
+        self.assertEqual(
+            reverse("record-list", kwargs={"module": "produtos"}),
+            "/app/produtos/",
+        )
 
 
 class ApiRolePermissionTests(TestCase):
@@ -92,15 +102,11 @@ class ApiRolePermissionTests(TestCase):
 
         self.assertEqual(response.status_code, 201)
 
-    def test_operator_can_view_products_in_admin_but_not_edit_them(self):
-        model_admin = admin.site._registry[Produto]
-        request = RequestFactory().get("/admin/produtos/produto/")
+    def test_operator_cannot_access_django_admin(self):
+        request = RequestFactory().get("/admin/")
         request.user = self.operator
 
-        self.assertTrue(model_admin.has_view_permission(request))
-        self.assertFalse(model_admin.has_add_permission(request))
-        self.assertFalse(model_admin.has_change_permission(request, self.product))
-        self.assertFalse(model_admin.has_delete_permission(request, self.product))
+        self.assertFalse(erp_admin_site.has_permission(request))
 
 
 class ERPUserBootstrapTests(TestCase):
@@ -201,8 +207,8 @@ class EmailModuleTests(TestCase):
         self.assertTrue(form.is_valid())
         form.save(
             domain_override="testserver",
-            subject_template_name="registration/password_reset_subject.txt",
-            email_template_name="registration/password_reset_email.html",
+            subject_template_name="core/auth/password_reset_subject.txt",
+            email_template_name="core/auth/password_reset_email.html",
         )
 
         self.assertEqual(len(mail.outbox), 1)
@@ -250,3 +256,168 @@ class EmailModuleTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(mail.outbox, [])
+
+
+class FrontendPermissionTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        groups = setup_access_groups()
+        user_model = get_user_model()
+        cls.manager = user_model.objects.create_user(
+            username="frontend-manager",
+            password="test-password",
+            is_staff=True,
+        )
+        cls.manager.groups.add(groups[MANAGER_GROUP])
+        cls.operator = user_model.objects.create_user(
+            username="frontend-operator",
+            password="test-password",
+            is_staff=True,
+        )
+        cls.operator.groups.add(groups[OPERATOR_GROUP])
+        cls.admin_user = user_model.objects.create_superuser(
+            username="frontend-admin",
+            password="test-password",
+        )
+
+    def request_as(self, path, user, data=None):
+        factory = RequestFactory()
+        request = factory.post(path, data) if data is not None else factory.get(path)
+        request.user = user
+        request.session = {}
+        request._messages = FallbackStorage(request)
+        return request
+
+    def test_anonymous_home_redirects_to_custom_login(self):
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, "/login/?next=/")
+
+    def test_custom_login_and_password_reset_pages_render(self):
+        login_request = self.request_as("/login/", AnonymousUser())
+        login_page = resolve("/login/").func(login_request)
+        reset_request = self.request_as(
+            "/admin/password_reset/",
+            AnonymousUser(),
+        )
+        reset_page = resolve("/admin/password_reset/").func(reset_request)
+
+        login_page.render()
+        reset_page.render()
+        self.assertEqual(login_page.status_code, 200)
+        self.assertIn("Acesse sua conta", login_page.content.decode())
+        self.assertIn("/static/core/app.css", login_page.content.decode())
+        self.assertEqual(reset_page.status_code, 200)
+        self.assertIn("Redefinir senha", reset_page.content.decode())
+
+    def test_dashboard_and_module_list_render(self):
+        Produto.objects.create(
+            nome="Produto no painel",
+            sku="PANEL-001",
+            preco="14.50",
+            quantidade_estoque=3,
+        )
+
+        dashboard = home(self.request_as("/", self.manager))
+        product_list = record_list(
+            self.request_as("/app/produtos/", self.operator),
+            module="produtos",
+        )
+
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertIn("Visão geral", dashboard.content.decode())
+        self.assertEqual(product_list.status_code, 200)
+        self.assertIn("Produto no painel", product_list.content.decode())
+
+    def test_record_form_and_delete_confirmation_render(self):
+        product = Produto.objects.create(
+            nome="Produto removível",
+            sku="DELETE-001",
+            preco="14.50",
+        )
+        form_page = record_edit(
+            self.request_as("/app/produtos/novo/", self.manager),
+            module="produtos",
+        )
+        delete_page = record_delete(
+            self.request_as(
+                f"/app/produtos/{product.pk}/excluir/",
+                self.manager,
+            ),
+            module="produtos",
+            pk=product.pk,
+        )
+
+        self.assertEqual(form_page.status_code, 200)
+        self.assertIn("Novo produto", form_page.content.decode())
+        self.assertEqual(delete_page.status_code, 200)
+
+    def test_manager_can_render_email_module(self):
+        response = send_notice(
+            self.request_as("/emails/enviar/", self.manager),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Enviar comunicado", response.content.decode())
+
+    def test_only_superusers_can_open_django_admin(self):
+        request = RequestFactory().get("/admin/")
+        request.user = self.manager
+        self.assertFalse(erp_admin_site.has_permission(request))
+
+        request.user = self.admin_user
+        self.assertTrue(erp_admin_site.has_permission(request))
+
+    def test_manager_is_redirected_away_from_admin(self):
+        self.client.force_login(self.manager)
+
+        response = self.client.get("/admin/")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, "/admin/login/?next=/admin/")
+
+    def test_admin_login_form_rejects_non_superusers(self):
+        form = ERPAdminAuthenticationForm(
+            data={
+                "username": self.manager.username,
+                "password": "test-password",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+
+    def test_operator_cannot_create_business_records(self):
+        request = RequestFactory().post(
+            "/app/contas/novo/",
+            {
+                "nome": "Conta bloqueada",
+                "documento": "123456789",
+                "email": "",
+                "telefone": "",
+                "status": "lead",
+            },
+        )
+        request.user = self.operator
+
+        with self.assertRaises(PermissionDenied):
+            record_edit(request, module="contas")
+
+    def test_manager_can_create_business_records(self):
+        request = RequestFactory().post(
+            "/app/contas/novo/",
+            {
+                "nome": "Conta de teste",
+                "documento": "987654321",
+                "email": "cliente@example.com",
+                "telefone": "11999999999",
+                "status": "lead",
+            },
+        )
+        request.user = self.manager
+
+        with patch("core.views.messages.success"):
+            response = record_edit(request, module="contas")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Conta.objects.filter(nome="Conta de teste").exists())

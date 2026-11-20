@@ -1,15 +1,16 @@
 from django.contrib import admin
 
+from core.admin_site import erp_admin_site
 from .models import ContaReceber, Pagamento, PedidoVenda
 
 
-@admin.register(PedidoVenda)
+@admin.register(PedidoVenda, site=erp_admin_site)
 class PedidoVendaAdmin(admin.ModelAdmin):
     list_display = ("id", "proposta", "valor_final", "data_faturamento")
     list_filter = ("data_faturamento",)
 
 
-@admin.register(ContaReceber)
+@admin.register(ContaReceber, site=erp_admin_site)
 class ContaReceberAdmin(admin.ModelAdmin):
     list_display = (
         "id",
@@ -23,7 +24,7 @@ class ContaReceberAdmin(admin.ModelAdmin):
     search_fields = ("conta__nome",)
 
 
-@admin.register(Pagamento)
+@admin.register(Pagamento, site=erp_admin_site)
 class PagamentoAdmin(admin.ModelAdmin):
     list_display = (
         "id",

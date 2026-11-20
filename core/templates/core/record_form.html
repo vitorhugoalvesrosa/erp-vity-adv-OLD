@@ -1,0 +1,36 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+    <header class="page-heading">
+        <div>
+            <p class="eyebrow">{{ module.title }}</p>
+            <h1>{{ page_title }}</h1>
+            <p>Preencha os campos abaixo para salvar as informações.</p>
+        </div>
+    </header>
+
+    <section class="panel record-form-panel">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}<div class="form-error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="form-grid">
+                {% for field in form %}
+                    <div class="form-field {% if field.name == 'descricao' or field.name == 'recipients' or field.name == 'message' %}is-wide{% endif %}">
+                        {% if field.field.widget.input_type == "checkbox" %}
+                            <label class="form-checkbox-row" for="{{ field.id_for_label }}">{{ field }} {{ field.label }}</label>
+                        {% else %}
+                            {{ field.label_tag }}
+                            {{ field }}
+                        {% endif %}
+                        {{ field.errors }}
+                        {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="form-actions">
+                <a class="button button-secondary" href="{% url 'record-list' module=active_module %}">Cancelar</a>
+                <button class="button" type="submit">{% if instance %}Salvar alterações{% else %}Criar registro{% endif %}</button>
+            </div>
+        </form>
+    </section>
+{% endblock %}
