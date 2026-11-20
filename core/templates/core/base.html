@@ -43,7 +43,7 @@
                 </nav>
             {% endif %}
 
-            {% if perms.produtos.view_produto or perms.financeiro.view_pedidovenda %}
+            {% if perms.produtos.view_produto or perms.financeiro.view_pedidovenda or perms.pdv.view_sale %}
                 <button class="nav-label nav-group-toggle" type="button" data-menu-group="operations" aria-expanded="true" aria-controls="nav-operations">
                     <span>Operação</span><span class="nav-group-indicator" aria-hidden="true">⌄</span>
                 </button>
@@ -56,6 +56,11 @@
                     {% if perms.financeiro.view_pedidovenda %}
                         <a class="nav-link {% if active_module == 'pedidos' %}is-active{% endif %}" href="{% url 'record-list' module='pedidos' %}">
                             <span class="nav-icon">PV</span> Pedidos de venda
+                        </a>
+                    {% endif %}
+                    {% if perms.pdv.view_sale %}
+                        <a class="nav-link {% if active_module == 'pdv' %}is-active{% endif %}" href="{% url 'pdv:terminal' %}">
+                            <span class="nav-icon">PDV</span> Ponto de venda
                         </a>
                     {% endif %}
                 </nav>

@@ -1,15 +1,23 @@
 import os
 import secrets
+from datetime import datetime, timedelta, timezone as datetime_timezone
 from io import StringIO
 from unittest.mock import patch
 
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.serialization import pkcs12
+from cryptography.x509.oid import NameOID
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import PermissionDenied
 from django.core.management import call_command
+from django.core.mail import get_connection
 from django.http import HttpResponse
 from django.urls import resolve, reverse
 from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
@@ -18,8 +26,11 @@ from rest_framework.test import APIClient
 from crm.models import Conta
 from core.admin_site import ERPAdminAuthenticationForm, erp_admin_site
 from core.access_control import MANAGER_GROUP, OPERATOR_GROUP, setup_access_groups
+from core.configuration_forms import A1CertificateForm, CompanyProfileForm, SMTPConfigurationForm
+from core.email_config import get_smtp_settings
 from core.management.commands.bootstrap_erp_users import BOOTSTRAP_NAME
-from core.models import ERPAdminPasswordReset, ERPUserBootstrap
+from core.models import A1Certificate, ERPAdminPasswordReset, ERPUserBootstrap, SMTPConfiguration
+from core.secure_storage import decrypt_bytes, decrypt_text
 from core.views import (
     administration,
     home,
@@ -46,6 +57,12 @@ class HomePageRouteTests(SimpleTestCase):
             "admin:financeiro_pedidovenda_changelist": "/admin/financeiro/pedidovenda/",
             "admin:financeiro_contareceber_changelist": "/admin/financeiro/contareceber/",
             "admin:financeiro_pagamento_changelist": "/admin/financeiro/pagamento/",
+            "admin:core_companyprofile_changelist": "/admin/core/companyprofile/",
+            "admin:core_a1certificate_changelist": "/admin/core/a1certificate/",
+            "admin:core_smtpconfiguration_changelist": "/admin/core/smtpconfiguration/",
+            "admin:pdv_cashregister_changelist": "/admin/pdv/cashregister/",
+            "admin:pdv_sale_changelist": "/admin/pdv/sale/",
+            "pdv:terminal": "/pdv/",
         }
 
         for name, path in routes.items():
@@ -152,6 +169,143 @@ class ProductServiceInventoryTests(TestCase):
         self.assertEqual(product.quantidade_estoque, 0)
 
 
+class SecureSystemConfigurationTests(TestCase):
+    def test_company_profile_accepts_formatted_alphanumeric_cnpj(self):
+        form = CompanyProfileForm(
+            data={
+                "legal_name": "Empresa de Teste MEI",
+                "trade_name": "Loja Teste",
+                "cnpj": "12.345.ABC/9012-34",
+                "municipal_registration": "",
+                "state_registration": "",
+                "tax_regime": "mei",
+                "cnae": "",
+                "postal_code": "",
+                "street": "",
+                "street_number": "",
+                "address_complement": "",
+                "neighborhood": "",
+                "city": "Rio de Janeiro",
+                "state": "RJ",
+                "phone": "",
+                "email": "",
+            }
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        company = form.save()
+        self.assertEqual(company.cnpj, "12345ABC901234")
+
+    @override_settings(CONFIG_ENCRYPTION_KEY="")
+    def test_smtp_password_requires_environment_encryption_key(self):
+        form = SMTPConfigurationForm(
+            data={
+                "host": "smtp.example.com",
+                "port": "587",
+                "username": "erp@example.com",
+                "smtp_password": "not-stored",
+                "from_email": "erp@example.com",
+                "use_tls": "on",
+                "timeout": "10",
+                "is_active": "on",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("CONFIG_ENCRYPTION_KEY", str(form.errors))
+        self.assertEqual(SMTPConfiguration.objects.count(), 0)
+
+    def test_smtp_configuration_encrypts_password_and_drives_mail_backend(self):
+        from cryptography.fernet import Fernet
+
+        key = Fernet.generate_key().decode("ascii")
+        with override_settings(
+            CONFIG_ENCRYPTION_KEY=key,
+            EMAIL_BACKEND="core.mail_backend.ConfiguredSMTPEmailBackend",
+        ):
+            form = SMTPConfigurationForm(
+                data={
+                    "host": "smtp.example.com",
+                    "port": "587",
+                    "username": "erp@example.com",
+                    "smtp_password": "smtp-secret",
+                    "from_email": "erp@example.com",
+                    "use_tls": "on",
+                    "timeout": "10",
+                    "is_active": "on",
+                }
+            )
+            self.assertTrue(form.is_valid(), form.errors)
+            configuration = form.save()
+
+            self.assertNotIn(
+                b"smtp-secret",
+                bytes(configuration.password_encrypted),
+            )
+            self.assertEqual(
+                decrypt_text(configuration.password_encrypted),
+                "smtp-secret",
+            )
+            resolved = get_smtp_settings()
+            self.assertTrue(resolved.is_configured)
+            self.assertEqual(resolved.from_email, "erp@example.com")
+            backend = get_connection()
+            self.assertEqual(backend.host, "smtp.example.com")
+            self.assertEqual(backend.password, "smtp-secret")
+
+    def test_a1_upload_is_validated_and_encrypted_in_database(self):
+        from cryptography.fernet import Fernet
+
+        key = Fernet.generate_key().decode("ascii")
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        now = datetime.now(datetime_timezone.utc)
+        subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "ERP Test")])
+        certificate = (
+            x509.CertificateBuilder()
+            .subject_name(subject)
+            .issuer_name(subject)
+            .public_key(private_key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(now - timedelta(days=1))
+            .not_valid_after(now + timedelta(days=30))
+            .sign(private_key, hashes.SHA256())
+        )
+        certificate_bytes = pkcs12.serialize_key_and_certificates(
+            b"erp-test",
+            private_key,
+            certificate,
+            None,
+            serialization.BestAvailableEncryption(b"certificate-secret"),
+        )
+
+        with override_settings(CONFIG_ENCRYPTION_KEY=key):
+            form = A1CertificateForm(
+                data={"certificate_password": "certificate-secret"},
+                files={
+                    "certificate_file": SimpleUploadedFile(
+                        "empresa.p12",
+                        certificate_bytes,
+                    )
+                },
+            )
+            self.assertTrue(form.is_valid(), form.errors)
+            saved_certificate = form.save()
+
+            self.assertNotIn(
+                certificate_bytes,
+                bytes(saved_certificate.encrypted_file),
+            )
+            self.assertEqual(
+                decrypt_bytes(saved_certificate.encrypted_file),
+                certificate_bytes,
+            )
+            self.assertEqual(
+                decrypt_text(saved_certificate.encrypted_password),
+                "certificate-secret",
+            )
+            self.assertEqual(A1Certificate.objects.count(), 1)
+
+
 class ERPUserBootstrapTests(TestCase):
     def test_bootstrap_creates_users_once_without_resetting_them(self):
         env_passwords = {
@@ -229,6 +383,8 @@ class ERPAdminPasswordResetTests(TestCase):
 @override_settings(
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
     EMAIL_HOST="smtp.example.com",
+    EMAIL_HOST_USER="erp@example.com",
+    EMAIL_HOST_PASSWORD="smtp-test-secret",
     DEFAULT_FROM_EMAIL="erp@example.com",
 )
 class EmailModuleTests(TestCase):
@@ -456,6 +612,10 @@ class FrontendPermissionTests(TestCase):
         self.assertIn("Grupos e permissões", content)
         self.assertIn("Financeiro", content)
         self.assertIn("Django Admin", content)
+        self.assertIn("Dados da empresa", content)
+        self.assertIn("Certificado A1", content)
+        self.assertIn("Configuração SMTP", content)
+        self.assertIn("Operação do PDV", content)
 
     def test_only_superusers_can_open_django_admin(self):
         request = RequestFactory().get("/admin/")

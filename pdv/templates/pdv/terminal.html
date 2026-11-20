@@ -1,0 +1,418 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+    <header class="page-heading">
+        <div>
+            <p class="eyebrow">OPERAÇÃO</p>
+            <h1>Ponto de venda</h1>
+            <p>Prepare vendas, registre movimentações e acompanhe o caixa.</p>
+        </div>
+        {% if register %}
+            <span class="status-pill status-open">Caixa aberto</span>
+        {% endif %}
+    </header>
+
+    <div class="alert-strip" role="status">
+        <span><strong>Fechamento fiscal bloqueado.</strong> {{ fiscal_setup_message }} A pré-venda não altera estoque nem registra recebimento.</span>
+    </div>
+
+    {% if not register %}
+        <section class="panel pdv-register-panel">
+            <div class="panel-header">
+                <div>
+                    <h2>Iniciar operação</h2>
+                    <p>Informe o fundo de troco para abrir seu caixa.</p>
+                </div>
+            </div>
+            <div class="pdv-panel-body">
+                {% if can_open %}
+                    <form class="pdv-inline-form" method="post" action="{% url 'pdv:open-register' %}">
+                        {% csrf_token %}
+                        <div class="form-field">
+                            {{ open_form.opening_amount.label_tag }}
+                            <input class="form-control" type="number" name="opening_amount" min="0" step="0.01" value="0.00" required>
+                        </div>
+                        <button class="button" type="submit">Abrir caixa</button>
+                    </form>
+                {% else %}
+                    <p class="empty-state">Você não tem permissão para abrir caixa.</p>
+                {% endif %}
+            </div>
+        </section>
+    {% else %}
+        <section class="pdv-summary-grid">
+            <article class="panel pdv-summary-card">
+                <span>Operador</span>
+                <strong>{{ register.cashier.get_full_name|default:register.cashier.username }}</strong>
+                <small>Aberto em {{ register.opened_at|date:"d/m/Y H:i" }}</small>
+            </article>
+            <article class="panel pdv-summary-card">
+                <span>Fundo inicial</span>
+                <strong>R$ {{ register.opening_amount|floatformat:2 }}</strong>
+                <small>Valor informado na abertura</small>
+            </article>
+            <article class="panel pdv-summary-card">
+                <span>Dinheiro esperado</span>
+                <strong>R$ {{ expected_cash|floatformat:2 }}</strong>
+                <small>Fundo + suprimentos − sangrias</small>
+            </article>
+        </section>
+
+        <div class="pdv-workspace">
+            <section class="panel pdv-sale-panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Nova pré-venda</h2>
+                        <p>Leia o SKU com o scanner ou digite o código e a quantidade.</p>
+                    </div>
+                </div>
+                <div class="pdv-panel-body">
+                    {% if can_create_sale %}
+                        <form id="pdv-sale-form" method="post" action="{% url 'pdv:create-draft' %}">
+                            {% csrf_token %}
+                            <div class="pdv-scan-row">
+                                <div class="form-field">
+                                    <label for="pdv-sku">SKU / código</label>
+                                    <input class="form-control" id="pdv-sku" autocomplete="off" placeholder="Escaneie ou informe o SKU">
+                                </div>
+                                <div class="form-field pdv-quantity-field">
+                                    <label for="pdv-quantity">Qtd.</label>
+                                    <input class="form-control" id="pdv-quantity" type="number" min="0.001" step="0.001" value="1">
+                                </div>
+                                <button class="button" id="pdv-add-item" type="button">Adicionar</button>
+                            </div>
+                            <p class="form-error" id="pdv-item-error" role="alert" hidden></p>
+
+                            <div class="table-wrap pdv-cart-wrap">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Item</th>
+                                            <th>Tipo</th>
+                                            <th>Qtd.</th>
+                                            <th>Preço</th>
+                                            <th>Total</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pdv-cart">
+                                        <tr><td colspan="6"><div class="empty-state"><strong>Venda vazia</strong><p>Adicione produtos ou serviços pelo SKU.</p></div></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="pdv-checkout-grid">
+                                <div class="pdv-checkout-fields">
+                                    {% if perms.crm.view_conta %}
+                                        <div class="form-field">
+                                            {{ draft_form.customer.label_tag }}
+                                            {{ draft_form.customer }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-field">
+                                        {{ draft_form.discount_amount.label_tag }}
+                                        <input class="form-control" id="pdv-discount" type="number" name="discount_amount" min="0" step="0.01" value="0.00">
+                                    </div>
+                                </div>
+                                <div class="pdv-totals">
+                                    <div><span>Subtotal</span><strong id="pdv-subtotal">R$ 0,00</strong></div>
+                                    <div><span>Desconto</span><strong id="pdv-discount-total">R$ 0,00</strong></div>
+                                    <div class="pdv-grand-total"><span>Total</span><strong id="pdv-total">R$ 0,00</strong></div>
+                                </div>
+                            </div>
+
+                            <div class="pdv-payment-section">
+                                <div class="pdv-section-heading">
+                                    <div><h3>Formas de pagamento planejadas</h3><p>Permite dividir o valor entre métodos; nada será cobrado até a emissão fiscal estar ativa.</p></div>
+                                    <button class="button button-secondary" id="pdv-add-payment" type="button">Adicionar forma</button>
+                                </div>
+                                <div id="pdv-payments">
+                                    <div class="pdv-payment-row">
+                                        <select class="form-select pdv-payment-method" aria-label="Forma de pagamento">
+                                            <option value="cash">Dinheiro</option><option value="pix">Pix</option><option value="debit">Cartão de débito</option><option value="credit">Cartão de crédito</option><option value="voucher">Vale / voucher</option><option value="transfer">Transferência</option>
+                                        </select>
+                                        <input class="form-control pdv-payment-amount" type="number" min="0.01" step="0.01" value="0.00" aria-label="Valor do pagamento">
+                                        <input class="form-control pdv-payment-reference" maxlength="100" placeholder="Referência (opcional)" aria-label="Referência do pagamento">
+                                        <button class="button button-secondary pdv-remove-payment" type="button" aria-label="Remover pagamento">×</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{ draft_form.items }}
+                            {{ draft_form.tenders }}
+                            <div class="form-actions">
+                                <button class="button" type="submit">Salvar pré-venda</button>
+                                <button class="button button-secondary" type="button" id="pdv-clear">Limpar</button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <p class="empty-state">Seu perfil pode consultar o caixa, mas não criar pré-vendas.</p>
+                    {% endif %}
+                </div>
+            </section>
+
+            <aside class="pdv-side-column">
+                <section class="panel">
+                    <div class="panel-header">
+                        <div><h2>Caixa</h2><p>Suprimentos e sangrias</p></div>
+                    </div>
+                    <div class="pdv-panel-body">
+                        {% if can_move_cash %}
+                            <form method="post" action="{% url 'pdv:cash-movement' %}" class="pdv-stacked-form">
+                                {% csrf_token %}
+                                <div class="form-field">
+                                    {{ movement_form.direction.label_tag }}
+                                    {{ movement_form.direction }}
+                                </div>
+                                <div class="form-field">
+                                    {{ movement_form.amount.label_tag }}
+                                    <input class="form-control" type="number" name="amount" min="0.01" step="0.01" required>
+                                </div>
+                                <div class="form-field">
+                                    {{ movement_form.description.label_tag }}
+                                    {{ movement_form.description }}
+                                </div>
+                                <button class="button button-secondary" type="submit">Registrar movimentação</button>
+                            </form>
+                        {% endif %}
+                        <div class="pdv-movement-list">
+                            {% for movement in movements %}
+                                <div class="pdv-movement-row">
+                                    <span class="pdv-movement-sign {% if movement.direction == 'in' %}is-in{% else %}is-out{% endif %}">{% if movement.direction == 'in' %}+{% else %}−{% endif %}</span>
+                                    <span><strong>{{ movement.get_kind_display }}</strong><small>{{ movement.description }} · {{ movement.created_at|date:"H:i" }}</small></span>
+                                    <b>R$ {{ movement.amount|floatformat:2 }}</b>
+                                </div>
+                            {% empty %}
+                                <p class="pdv-empty-inline">Nenhuma movimentação até agora.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel pdv-close-panel">
+                    <div class="panel-header">
+                        <div><h2>Fechar caixa</h2><p>O fechamento de vendas permanece bloqueado pela integração fiscal.</p></div>
+                    </div>
+                    <div class="pdv-panel-body">
+                        {% if can_close %}
+                            <form method="post" action="{% url 'pdv:close-register' %}" class="pdv-stacked-form">
+                                {% csrf_token %}
+                                <div class="form-field">
+                                    {{ close_form.counted_amount.label_tag }}
+                                    <input class="form-control" type="number" name="counted_amount" min="0" step="0.01" required>
+                                </div>
+                                <button class="button button-secondary" type="submit">Conferir e fechar caixa</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </section>
+            </aside>
+        </div>
+
+        <section class="panel pdv-drafts-panel">
+            <div class="panel-header">
+                <div><h2>Pré-vendas em aberto</h2><p>Rascunhos ainda não cobrados nem baixados do estoque.</p></div>
+            </div>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead><tr><th>Nº</th><th>Operador</th><th>Itens</th><th>Pagamento planejado</th><th>Total</th><th>Ações</th></tr></thead>
+                    <tbody>
+                        {% for sale in draft_sales %}
+                            <tr>
+                                <td>#{{ sale.pk }}</td>
+                                <td>{{ sale.cashier.get_full_name|default:sale.cashier.username }}</td>
+                                <td>{% for item in sale.items.all %}{{ item.quantity }} × {{ item.product_name }}{% if not forloop.last %}; {% endif %}{% endfor %}</td>
+                                <td>{% for tender in sale.tenders.all %}{{ tender.get_method_display }} R$ {{ tender.amount|floatformat:2 }}{% if not forloop.last %}; {% endif %}{% endfor %}</td>
+                                <td>R$ {{ sale.total|floatformat:2 }}</td>
+                                <td>
+                                    <div class="pdv-draft-actions">
+                                        {% if can_create_sale %}
+                                            <form method="post" action="{% url 'pdv:finalize-sale' sale.pk %}">
+                                                {% csrf_token %}
+                                                <button class="button button-disabled" type="submit" disabled title="{{ fiscal_setup_message }}">Fechar venda</button>
+                                            </form>
+                                        {% endif %}
+                                        {% if can_cancel_any or sale.cashier_id == request.user.id %}
+                                            <form method="post" action="{% url 'pdv:cancel-draft' sale.pk %}" class="pdv-cancel-form">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="reason" value="Cancelado pelo operador">
+                                                <button class="text-link text-danger" type="submit">Cancelar rascunho</button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="6"><div class="empty-state"><strong>Nenhuma pré-venda em aberto</strong><p>Os rascunhos preparados aparecerão aqui.</p></div></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        {{ product_data|json_script:"pdv-products" }}
+    {% endif %}
+
+    <script>
+        const pdvProducts = JSON.parse(document.getElementById("pdv-products")?.textContent || "[]");
+        const productBySku = new Map(pdvProducts.map((product) => [product.sku.toLowerCase(), product]));
+        const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+        const cart = new Map();
+        const cartBody = document.getElementById("pdv-cart");
+        const skuInput = document.getElementById("pdv-sku");
+        const quantityInput = document.getElementById("pdv-quantity");
+        const itemError = document.getElementById("pdv-item-error");
+        const discountInput = document.getElementById("pdv-discount");
+        const payments = document.getElementById("pdv-payments");
+        const saleForm = document.getElementById("pdv-sale-form");
+
+        const lineAmount = (item) => Math.round(Number(item.price) * item.quantity * 100) / 100;
+        const renderCart = () => {
+            if (!cartBody) return;
+            cartBody.replaceChildren();
+            if (!cart.size) {
+                const row = document.createElement("tr");
+                const cell = document.createElement("td");
+                cell.colSpan = 6;
+                cell.textContent = "Venda vazia — adicione itens pelo SKU.";
+                row.append(cell);
+                cartBody.append(row);
+                updateTotals();
+                return;
+            }
+            cart.forEach((item, sku) => {
+                const row = document.createElement("tr");
+                const values = [
+                    `${item.name} · ${sku}`,
+                    item.is_service ? "Serviço" : "Produto",
+                    String(item.quantity),
+                    currency.format(item.price),
+                    currency.format(lineAmount(item)),
+                ];
+                values.forEach((value) => {
+                    const cell = document.createElement("td");
+                    cell.textContent = value;
+                    row.append(cell);
+                });
+                const actionCell = document.createElement("td");
+                const removeButton = document.createElement("button");
+                removeButton.className = "text-link text-danger";
+                removeButton.type = "button";
+                removeButton.textContent = "Remover";
+                removeButton.addEventListener("click", () => {
+                    cart.delete(sku);
+                    renderCart();
+                });
+                actionCell.append(removeButton);
+                row.append(actionCell);
+                cartBody.append(row);
+            });
+            updateTotals();
+        };
+
+        const paymentRows = () => [...(payments?.querySelectorAll(".pdv-payment-row") || [])];
+        const updateTotals = () => {
+            if (!cartBody) return;
+            const subtotal = [...cart.values()].reduce((sum, item) => sum + lineAmount(item), 0);
+            const discount = Math.min(Math.max(Number(discountInput?.value || 0), 0), subtotal);
+            const total = Math.round((subtotal - discount) * 100) / 100;
+            document.getElementById("pdv-subtotal").textContent = currency.format(subtotal);
+            document.getElementById("pdv-discount-total").textContent = currency.format(discount);
+            document.getElementById("pdv-total").textContent = currency.format(total);
+            const rows = paymentRows();
+            if (rows.length) {
+                const otherPayments = rows.slice(1).reduce(
+                    (sum, row) => sum + Number(row.querySelector(".pdv-payment-amount").value || 0),
+                    0
+                );
+                rows[0].querySelector(".pdv-payment-amount").value =
+                    Math.max(total - otherPayments, 0).toFixed(2);
+            }
+        };
+
+        const addProduct = () => {
+            const sku = skuInput?.value.trim().toLowerCase();
+            const product = productBySku.get(sku);
+            const quantity = Number(quantityInput?.value || 0);
+            if (!product) {
+                itemError.textContent = "SKU não encontrado ou produto inativo.";
+                itemError.hidden = false;
+                skuInput.focus();
+                return;
+            }
+            if (!Number.isFinite(quantity) || quantity <= 0) {
+                itemError.textContent = "Informe uma quantidade maior que zero.";
+                itemError.hidden = false;
+                quantityInput.focus();
+                return;
+            }
+            const currentQuantity = cart.get(product.sku)?.quantity || 0;
+            if (!product.is_service && currentQuantity + quantity > Number(product.stock)) {
+                itemError.textContent = `Estoque disponível de ${product.name}: ${product.stock}.`;
+                itemError.hidden = false;
+                return;
+            }
+            const current = cart.get(product.sku);
+            cart.set(product.sku, {
+                ...product,
+                quantity: (current?.quantity || 0) + quantity,
+            });
+            itemError.hidden = true;
+            skuInput.value = "";
+            quantityInput.value = "1";
+            skuInput.focus();
+            renderCart();
+        };
+
+        document.getElementById("pdv-add-item")?.addEventListener("click", addProduct);
+        skuInput?.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                addProduct();
+            }
+        });
+        discountInput?.addEventListener("input", updateTotals);
+        document.getElementById("pdv-clear")?.addEventListener("click", () => {
+            cart.clear();
+            renderCart();
+        });
+        document.getElementById("pdv-add-payment")?.addEventListener("click", () => {
+            const row = document.createElement("div");
+            row.className = "pdv-payment-row";
+            row.innerHTML = `
+                <select class="form-select pdv-payment-method" aria-label="Forma de pagamento">
+                    <option value="cash">Dinheiro</option><option value="pix">Pix</option>
+                    <option value="debit">Cartão de débito</option><option value="credit">Cartão de crédito</option>
+                    <option value="voucher">Vale / voucher</option><option value="transfer">Transferência</option>
+                </select>
+                <input class="form-control pdv-payment-amount" type="number" min="0.01" step="0.01" value="0.00" aria-label="Valor do pagamento">
+                <input class="form-control pdv-payment-reference" maxlength="100" placeholder="Referência (opcional)" aria-label="Referência do pagamento">
+                <button class="button button-secondary pdv-remove-payment" type="button" aria-label="Remover pagamento">×</button>`;
+            payments.append(row);
+            row.querySelector(".pdv-remove-payment").addEventListener("click", () => row.remove());
+        });
+        payments?.addEventListener("click", (event) => {
+            if (event.target.closest(".pdv-remove-payment") && payments.children.length > 1) {
+                event.target.closest(".pdv-payment-row").remove();
+                updateTotals();
+            }
+        });
+        saleForm?.addEventListener("submit", (event) => {
+            if (!cart.size) {
+                event.preventDefault();
+                itemError.textContent = "Adicione ao menos um item antes de salvar a pré-venda.";
+                itemError.hidden = false;
+                return;
+            }
+            saleForm.querySelector('[name="items"]').value = JSON.stringify(
+                [...cart.entries()].map(([sku, item]) => ({ sku, quantity: item.quantity }))
+            );
+            saleForm.querySelector('[name="tenders"]').value = JSON.stringify(
+                paymentRows().map((row) => ({
+                    method: row.querySelector(".pdv-payment-method").value,
+                    amount: row.querySelector(".pdv-payment-amount").value,
+                    reference: row.querySelector(".pdv-payment-reference").value,
+                }))
+            );
+        });
+    </script>
+{% endblock %}

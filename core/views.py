@@ -1,12 +1,11 @@
 import smtplib
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 from django.core.mail import EmailMessage
+from django.core.paginator import Paginator
 from django.db.models import Q, Sum
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -16,6 +15,7 @@ from django.utils import timezone
 from crm.models import Conta, Proposta
 from financeiro.models import ContaReceber, Pagamento, PedidoVenda
 from produtos.models import Produto
+from .email_config import get_smtp_settings
 from .forms import (
     ContaForm,
     ContaReceberForm,
@@ -368,7 +368,16 @@ class ERPPasswordResetView(auth_views.PasswordResetView):
     success_url = reverse_lazy("password_reset_done")
 
     def form_valid(self, form):
-        if not settings.EMAIL_HOST or not settings.DEFAULT_FROM_EMAIL:
+        try:
+            smtp_settings = get_smtp_settings()
+        except ImproperlyConfigured:
+            form.add_error(
+                None,
+                "Não foi possível ler a configuração SMTP criptografada. "
+                "Verifique CONFIG_ENCRYPTION_KEY no ambiente.",
+            )
+            return self.form_invalid(form)
+        if not smtp_settings.is_configured:
             form.add_error(
                 None,
                 "O envio de e-mails ainda não está configurado neste ambiente.",
@@ -376,6 +385,7 @@ class ERPPasswordResetView(auth_views.PasswordResetView):
             return self.form_invalid(form)
 
         try:
+            self.from_email = smtp_settings.from_email
             return super().form_valid(form)
         except (OSError, smtplib.SMTPException) as exc:
             form.add_error(None, f"Não foi possível enviar o e-mail: {exc}")
@@ -401,32 +411,42 @@ def send_notice(request):
 
     form = EmailNoticeForm(request.POST if request.method == "POST" else None)
     if request.method == "POST" and form.is_valid():
-        if not settings.EMAIL_HOST or not settings.DEFAULT_FROM_EMAIL:
+        try:
+            smtp_settings = get_smtp_settings()
+        except ImproperlyConfigured:
             form.add_error(
                 None,
-                "O envio de e-mails ainda não está configurado neste ambiente.",
+                "Não foi possível ler a configuração SMTP criptografada. "
+                "Verifique CONFIG_ENCRYPTION_KEY no ambiente.",
             )
-        else:
-            recipients = list(form.cleaned_data["recipients"])
-            email = EmailMessage(
-                subject=form.cleaned_data["subject"],
-                body=form.cleaned_data["message"],
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[settings.DEFAULT_FROM_EMAIL],
-                bcc=[user.email for user in recipients],
-            )
-            try:
-                sent = email.send(fail_silently=False)
-            except (OSError, smtplib.SMTPException) as exc:
-                form.add_error(None, f"Não foi possível enviar o e-mail: {exc}")
+            smtp_settings = None
+        if smtp_settings is not None:
+            if not smtp_settings.is_configured:
+                form.add_error(
+                    None,
+                    "O envio de e-mails ainda não está configurado neste ambiente.",
+                )
             else:
-                if sent == 1:
-                    messages.success(
-                        request,
-                        f"Comunicado enviado para {len(recipients)} usuário(s).",
-                    )
-                    return redirect("send-email-notice")
-                form.add_error(None, "O servidor de e-mail não aceitou o envio.")
+                recipients = list(form.cleaned_data["recipients"])
+                email = EmailMessage(
+                    subject=form.cleaned_data["subject"],
+                    body=form.cleaned_data["message"],
+                    from_email=smtp_settings.from_email,
+                    to=[smtp_settings.from_email],
+                    bcc=[user.email for user in recipients],
+                )
+                try:
+                    sent = email.send(fail_silently=False)
+                except (OSError, smtplib.SMTPException) as exc:
+                    form.add_error(None, f"Não foi possível enviar o e-mail: {exc}")
+                else:
+                    if sent == 1:
+                        messages.success(
+                            request,
+                            f"Comunicado enviado para {len(recipients)} usuário(s).",
+                        )
+                        return redirect("send-email-notice")
+                    form.add_error(None, "O servidor de e-mail não aceitou o envio.")
 
     return render(
         request,

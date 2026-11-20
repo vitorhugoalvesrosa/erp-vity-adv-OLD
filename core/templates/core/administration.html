@@ -50,10 +50,32 @@
                 <a class="text-link" href="{% url 'admin:financeiro_pagamento_changelist' %}">Pagamentos →</a>
             </div>
         </article>
+
+        <article class="panel admin-card">
+            <span class="admin-card-icon tone-violet">CFG</span>
+            <h2>Empresa e integrações</h2>
+            <p>Cadastre os dados da empresa, o certificado A1 e o SMTP autenticado.</p>
+            <div class="admin-card-links">
+                <a class="text-link" href="{% url 'admin:core_companyprofile_changelist' %}">Dados da empresa →</a>
+                <a class="text-link" href="{% url 'admin:core_a1certificate_changelist' %}">Certificado A1 →</a>
+                <a class="text-link" href="{% url 'admin:core_smtpconfiguration_changelist' %}">Configuração SMTP →</a>
+            </div>
+        </article>
+
+        <article class="panel admin-card">
+            <span class="admin-card-icon tone-blue">PDV</span>
+            <h2>Operação do PDV</h2>
+            <p>Consulte caixas, movimentações e pré-vendas registradas no sistema.</p>
+            <div class="admin-card-links">
+                <a class="text-link" href="{% url 'admin:pdv_cashregister_changelist' %}">Caixas →</a>
+                <a class="text-link" href="{% url 'admin:pdv_cashmovement_changelist' %}">Movimentações →</a>
+                <a class="text-link" href="{% url 'admin:pdv_sale_changelist' %}">Vendas e rascunhos →</a>
+            </div>
+        </article>
     </section>
 
     <aside class="admin-note">
         <span class="nav-icon">i</span>
-        <p><strong>Configurações do ambiente</strong> — credenciais, SMTP, banco de dados e opções de deploy são gerenciados nas variáveis de ambiente do Render; não são alterados por este painel.</p>
+        <p><strong>Proteção de credenciais</strong> — senhas SMTP e arquivos/senhas A1 são criptografados no banco. Configure <code>CONFIG_ENCRYPTION_KEY</code> como segredo no Render antes de cadastrar esses dados; não compartilhe a chave nem o certificado pelo chat.</p>
     </aside>
 {% endblock %}

@@ -40,7 +40,9 @@ Se precisar redefinir a senha de `admin` depois do bootstrap, configure `ERP_BOO
 
 ## E-mail
 
-Configure o serviço SMTP nas variáveis de ambiente do ambiente (ou no `.env` local): `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` e `DEFAULT_FROM_EMAIL`. Para Gmail ou Outlook, use uma senha de aplicativo quando exigida pelo provedor; nunca coloque credenciais no repositório. Use `EMAIL_USE_TLS=True` na porta 587 ou `EMAIL_USE_SSL=True` na porta 465, sem ativar as duas opções ao mesmo tempo.
+Um superusuário pode cadastrar SMTP autenticado em **Administração → Empresa e integrações**. A senha é criptografada no banco e a conexão pode ser testada no Django Admin. Se não houver configuração salva, o sistema aceita as variáveis `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` e `DEFAULT_FROM_EMAIL`. Para Gmail ou Outlook, use uma senha de aplicativo quando exigida pelo provedor; nunca coloque credenciais no repositório. Use `EMAIL_USE_TLS=True` na porta 587 ou `EMAIL_USE_SSL=True` na porta 465, sem ativar as duas opções ao mesmo tempo.
+
+Antes de salvar senhas SMTP ou certificado A1, configure `CONFIG_ENCRYPTION_KEY` como segredo no Render e no `.env` local. Gere uma chave com `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. A chave não é armazenada no banco nem no repositório; guarde-a em local seguro e não a troque sem recriptografar os dados. O certificado `.pfx`/`.p12` e sua senha são validados e criptografados no banco, sem publicação em `/media/`.
 
 O link **Esqueci minha senha** na tela de login envia um link de uso único para o endereço cadastrado no usuário. Administradores e gerentes também podem enviar comunicados aos usuários ativos com e-mail cadastrado pelo módulo **E-mails** no menu lateral. Cadastre e mantenha os endereços em Usuários no Django Admin.
 
@@ -57,9 +59,12 @@ O deploy atualiza os grupos e suas permissões após aplicar as migrations.
 - `crm`: contas (leads, negociações e clientes) e propostas comerciais.
 - `produtos`: catálogo, SKU, preços e quantidade em estoque.
 - `financeiro`: pedidos de venda, contas a receber e pagamentos.
+- `pdv`: abertura/fechamento de caixa, movimentações e preparação de vendas com pagamentos divididos.
 - `core`: frontend, autenticação, comunicação por e-mail e configuração do projeto Django em `erp_vity`.
 
 As alterações de esquema do banco estão registradas nas migrations de cada aplicação.
+
+O PDV rejeita produtos inativos, valida o estoque de mercadorias e não baixa estoque nem registra pagamento ao salvar uma pré-venda. O fechamento comercial fica bloqueado até a emissão fiscal estar integrada e configurada: NFS-e para serviços e NFC-e para mercadorias. O envio real desses documentos ainda não está disponível; a tela não afirma que uma nota foi emitida.
 
 ## API
 
