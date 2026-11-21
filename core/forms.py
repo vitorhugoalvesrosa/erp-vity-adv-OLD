@@ -67,6 +67,8 @@ class ProdutoForm(ERPModelForm):
             "sku",
             "preco",
             "eh_servico",
+            "categoria_estetica",
+            "duracao_minutos",
             "quantidade_estoque",
             "ativo",
         )

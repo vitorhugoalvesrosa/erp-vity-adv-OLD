@@ -11,9 +11,11 @@ class ProdutoAdmin(admin.ModelAdmin):
         "sku",
         "preco",
         "eh_servico",
+        "categoria_estetica",
+        "duracao_minutos",
         "quantidade_estoque",
         "ativo",
         "data_criacao",
     )
-    list_filter = ("eh_servico", "ativo", "data_criacao")
+    list_filter = ("eh_servico", "categoria_estetica", "ativo", "data_criacao")
     search_fields = ("nome", "sku")

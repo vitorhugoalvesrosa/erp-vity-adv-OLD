@@ -13,6 +13,8 @@ class ProdutoSerializer(serializers.ModelSerializer):
             "sku",
             "preco",
             "eh_servico",
+            "categoria_estetica",
+            "duracao_minutos",
             "quantidade_estoque",
             "ativo",
             "data_criacao",

@@ -75,7 +75,7 @@ MODULES = {
         "select_related": ("conta",),
     },
     "produtos": {
-        "title": "Produtos e estoque",
+        "title": "Produtos, estoque e serviços",
         "singular": "produto",
         "app": "produtos",
         "model": Produto,
@@ -85,6 +85,8 @@ MODULES = {
             ("sku", "SKU", "text"),
             ("preco", "Preço", "currency"),
             ("eh_servico", "Tipo", "service_type"),
+            ("categoria_estetica", "Categoria", "choice"),
+            ("duracao_minutos", "Duração", "number"),
             ("quantidade_estoque", "Estoque", "number"),
             ("ativo", "Status", "boolean"),
         ],

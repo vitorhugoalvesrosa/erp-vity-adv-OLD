@@ -37,12 +37,16 @@
         <script>
             const serviceField = document.getElementById("id_eh_servico");
             const stockField = document.getElementById("field-row-quantidade_estoque");
-            const updateStockField = () => {
+            const categoryField = document.getElementById("field-row-categoria_estetica");
+            const durationField = document.getElementById("field-row-duracao_minutos");
+            const updateProductFields = () => {
                 const isService = serviceField.checked;
                 stockField.hidden = isService;
+                categoryField.hidden = !isService;
+                durationField.hidden = !isService;
             };
-            serviceField.addEventListener("change", updateStockField);
-            updateStockField();
+            serviceField.addEventListener("change", updateProductFields);
+            updateProductFields();
         </script>
     {% endif %}
 {% endblock %}

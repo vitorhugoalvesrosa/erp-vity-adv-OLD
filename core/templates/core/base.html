@@ -67,7 +67,7 @@
                 <nav class="sidebar-nav" id="nav-operations" aria-label="Operação">
                     {% if perms.produtos.view_produto %}
                         <a class="nav-link {% if active_module == 'produtos' %}is-active{% endif %}" href="{% url 'record-list' module='produtos' %}">
-                            <svg class="nav-icon" aria-hidden="true"><use href="#icon-products"></use></svg> Produtos e estoque
+                            <svg class="nav-icon" aria-hidden="true"><use href="#icon-products"></use></svg> Produtos e serviços
                         </a>
                     {% endif %}
                     {% if perms.financeiro.view_pedidovenda %}
