@@ -1,0 +1,50 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+    <header class="page-heading">
+        <div>
+            <p class="eyebrow">ADMINISTRAÇÃO DO ERP</p>
+            <h1>Identidade visual</h1>
+            <p>Defina a marca e as cores usadas na navegação e nos cadastros.</p>
+        </div>
+        <a class="button button-secondary" href="{% url 'admin-settings' %}">Voltar à administração</a>
+    </header>
+
+    <section class="branding-preview" style="--preview-primary: {{ company_profile.primary_color|default:'#5968E8' }}; --preview-sidebar: {{ sidebar_color }}; --preview-accent: {{ company_profile.accent_color|default:'#36B89B' }}" aria-label="Prévia das cores">
+        <div class="branding-preview-sidebar">
+            <span class="branding-preview-mark">{{ company_display_name|slice:":1"|upper }}</span>
+            <strong>{{ company_display_name }}</strong>
+            <span>Visão geral</span>
+            <span>Cadastros</span>
+        </div>
+        <div class="branding-preview-main">
+            <span>ADMINISTRAÇÃO / CADASTROS</span>
+            <strong>Prévia da identidade</strong>
+            <div><i></i><i></i><i></i></div>
+        </div>
+    </section>
+
+    <section class="panel record-form-panel visual-identity-panel">
+        {% if not company_profile %}
+            <p class="form-intro">Este é o primeiro cadastro da empresa. Informe razão social e CNPJ para salvar a identidade visual.</p>
+        {% endif %}
+        <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}<div class="form-error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="form-grid">
+                {% for field in form %}
+                    <div class="form-field {% if field.name == 'logo' %}is-wide{% endif %}">
+                        {{ field.label_tag }}
+                        {{ field }}
+                        {{ field.errors }}
+                        {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="form-actions">
+                <a class="button button-secondary" href="{% url 'admin-settings' %}">Cancelar</a>
+                <button class="button" type="submit">Salvar identidade</button>
+            </div>
+        </form>
+    </section>
+{% endblock %}

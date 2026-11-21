@@ -1,0 +1,33 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | {{ company_display_name }}{% endblock %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'core/admin.css' %}">
+    <style>
+        :root {
+            --erp-admin-primary: {{ company_profile.primary_color|default:'#5968E8' }};
+            --erp-admin-sidebar: {{ sidebar_color }};
+            --erp-admin-accent: {{ company_profile.accent_color|default:'#36B89B' }};
+        }
+    </style>
+{% endblock %}
+
+{% block branding %}
+    <div id="site-name" class="erp-admin-brand">
+        <a href="{% url 'admin:index' %}" aria-label="{{ company_display_name }} Administração">
+            {% if company_profile.logo %}
+                <img src="{% url 'company-logo' %}" alt="">
+            {% else %}
+                <span class="erp-admin-brand-mark">{{ company_display_name|slice:":1"|upper }}</span>
+            {% endif %}
+            <span><strong>{{ company_display_name }}</strong><small>Administração e cadastros</small></span>
+        </a>
+    </div>
+{% endblock %}
+
+{% block nav-global %}
+    <a class="erp-admin-workspace" href="{% url 'home' %}">Voltar ao ERP</a>
+{% endblock %}

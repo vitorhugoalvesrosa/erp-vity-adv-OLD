@@ -8,7 +8,7 @@
     <title>{{ page_title }} | ERP Vity</title>
     <link rel="stylesheet" href="{% static 'core/app.css' %}">
 </head>
-<body style="--blue: {{ company_profile.primary_color|default:'#5968E8' }}; --mint: {{ company_profile.accent_color|default:'#36B89B' }}">
+<body style="--blue: {{ company_profile.primary_color|default:'#5968E8' }}; --navy: {{ sidebar_color }}; --mint: {{ company_profile.accent_color|default:'#36B89B' }}">
     <svg class="icon-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
         <symbol id="icon-overview" viewBox="0 0 24 24"><path d="M4 13a8 8 0 1 1 16 0"/><path d="M12 13l4-4M5 18h14"/><path d="M4.5 13H7m10 0h2.5"/></symbol>
         <symbol id="icon-clients" viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13"/><path d="M8 21v-6h8v6M7 10h.01M12 10h.01M17 10h.01"/></symbol>

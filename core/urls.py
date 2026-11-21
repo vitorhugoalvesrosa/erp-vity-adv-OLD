@@ -5,6 +5,11 @@ from . import views
 urlpatterns = [
     path("", views.home, name="home"),
     path("administracao/", views.administration, name="admin-settings"),
+    path(
+        "administracao/identidade-visual/",
+        views.visual_identity,
+        name="visual-identity",
+    ),
     path("identidade/logo/", views.company_logo, name="company-logo"),
     path(
         "app/orcamentos/<int:proposal_id>/gerar-pedido/",

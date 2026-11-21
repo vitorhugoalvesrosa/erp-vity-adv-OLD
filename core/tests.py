@@ -56,6 +56,7 @@ class HomePageRouteTests(SimpleTestCase):
         routes = {
             "home": "/",
             "admin-settings": "/administracao/",
+            "visual-identity": "/administracao/identidade-visual/",
             "login": "/login/",
             "admin:login": "/admin/login/",
             "admin_password_reset": "/admin/password_reset/",
@@ -548,6 +549,7 @@ class ContractWorkflowTests(TestCase):
                     "city": "São Paulo",
                     "state": "SP",
                     "primary_color": "#123456",
+                    "sidebar_color": "#234567",
                     "accent_color": "#298765",
                 },
                 files={
@@ -563,9 +565,47 @@ class ContractWorkflowTests(TestCase):
             logo = self.client.get(reverse("company-logo"))
 
         self.assertContains(dashboard, "--blue: #123456")
+        self.assertContains(dashboard, "--navy: #234567")
         self.assertContains(dashboard, "Serviços Vity")
         self.assertEqual(logo.status_code, 200)
         self.assertEqual(logo["Content-Type"], "image/png")
+
+    def test_visual_identity_settings_and_admin_branding(self):
+        self.client.force_login(self.manager)
+        denied = self.client.get(reverse("visual-identity"))
+        self.assertEqual(denied.status_code, 403)
+
+        admin_user = get_user_model().objects.create_superuser(
+            username="branding-admin",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        page = self.client.get(reverse("visual-identity"))
+        self.assertContains(page, "Cor do menu lateral")
+        self.assertContains(page, "branding-preview")
+
+        response = self.client.post(
+            reverse("visual-identity"),
+            {
+                "legal_name": "Prestadora de Serviços Ltda.",
+                "trade_name": "Marca Configurada",
+                "cnpj": "12345678901234",
+                "primary_color": "#123456",
+                "sidebar_color": "#234567",
+                "accent_color": "#298765",
+            },
+        )
+
+        self.assertRedirects(response, reverse("visual-identity"))
+        profile = CompanyProfile.objects.get()
+        self.assertEqual(profile.sidebar_color, "#234567")
+        self.assertContains(self.client.get(reverse("home")), "--navy: #234567")
+
+        admin_page = self.client.get(reverse("admin:index"))
+        self.assertContains(admin_page, "Marca Configurada")
+        self.assertContains(admin_page, "Administração e cadastros")
+        self.assertContains(admin_page, "core/admin.css")
+        self.assertContains(admin_page, "--erp-admin-sidebar: #234567")
 
 
 class FrontendPermissionTests(TestCase):

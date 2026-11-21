@@ -12,6 +12,15 @@
 
     <section class="admin-grid" aria-label="Configurações do sistema">
         <article class="panel admin-card">
+            <span class="admin-card-icon tone-blue">ID</span>
+            <h2>Identidade visual</h2>
+            <p>Personalize o logo, a cor principal, a cor de destaque e o menu lateral.</p>
+            <div class="admin-card-links">
+                <a class="text-link" href="{% url 'visual-identity' %}">Editar identidade visual →</a>
+            </div>
+        </article>
+
+        <article class="panel admin-card">
             <span class="admin-card-icon tone-violet">AC</span>
             <h2>Acessos e permissões</h2>
             <p>Gerencie contas de usuário, grupos e as permissões de cada perfil.</p>

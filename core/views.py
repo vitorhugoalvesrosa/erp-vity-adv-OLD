@@ -27,6 +27,7 @@ from crm.models import Conta, Proposta
 from financeiro.models import Contrato, ContaReceber, Pagamento, PedidoVenda
 from produtos.models import Produto
 from .email_config import get_smtp_settings
+from .configuration_forms import CompanyVisualIdentityForm
 from .forms import (
     ContaForm,
     ContaReceberForm,
@@ -250,6 +251,33 @@ def administration(request):
         {
             "page_title": "Administração",
             "active_module": "administration",
+        },
+    )
+
+
+@login_required
+def visual_identity(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
+    profile = CompanyProfile.objects.first()
+    form = CompanyVisualIdentityForm(
+        request.POST if request.method == "POST" else None,
+        request.FILES if request.method == "POST" else None,
+        instance=profile,
+    )
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Identidade visual atualizada com sucesso.")
+        return redirect("visual-identity")
+
+    return render(
+        request,
+        "core/visual_identity_form.html",
+        {
+            "page_title": "Identidade visual",
+            "active_module": "administration",
+            "form": form,
         },
     )
 
@@ -699,7 +727,6 @@ def contract_pdf(request, pk):
     return response
 
 
-@login_required
 def company_logo(request):
     company = CompanyProfile.objects.first()
     if not company or not company.logo:

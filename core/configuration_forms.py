@@ -23,7 +23,7 @@ class CompanyProfileForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field_name in ("primary_color", "accent_color"):
+        for field_name in ("primary_color", "sidebar_color", "accent_color"):
             self.fields[field_name].required = False
             self.fields[field_name].widget = forms.TextInput(
                 attrs={"type": "color", "class": "vTextField"}
@@ -42,6 +42,13 @@ class CompanyProfileForm(forms.ModelForm):
             self.instance.accent_color
             if self.instance.pk
             else CompanyProfile._meta.get_field("accent_color").get_default()
+        )
+
+    def clean_sidebar_color(self):
+        return self.cleaned_data.get("sidebar_color") or (
+            self.instance.sidebar_color
+            if self.instance.pk
+            else CompanyProfile._meta.get_field("sidebar_color").get_default()
         )
 
     def clean_logo(self):
@@ -69,6 +76,20 @@ class CompanyProfileForm(forms.ModelForm):
 
     def clean_cnpj(self):
         return re.sub(r"[\s./-]", "", self.cleaned_data["cnpj"]).upper()
+
+
+class CompanyVisualIdentityForm(CompanyProfileForm):
+    class Meta:
+        model = CompanyProfile
+        fields = (
+            "legal_name",
+            "trade_name",
+            "cnpj",
+            "logo",
+            "primary_color",
+            "sidebar_color",
+            "accent_color",
+        )
 
 
 class SMTPConfigurationForm(forms.ModelForm):

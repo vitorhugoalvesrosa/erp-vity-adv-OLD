@@ -1282,6 +1282,96 @@ textarea.form-control {
     margin-top: 20px;
 }
 
+.branding-preview {
+    display: grid;
+    min-height: 190px;
+    grid-template-columns: minmax(210px, .7fr) minmax(0, 1.3fr);
+    overflow: hidden;
+    margin-bottom: 18px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+}
+
+.branding-preview-sidebar {
+    display: grid;
+    align-content: start;
+    gap: 11px;
+    padding: 19px;
+    background: var(--preview-sidebar);
+    color: #fff;
+    font-size: .76rem;
+}
+
+.branding-preview-mark {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 9px;
+    background: linear-gradient(140deg, var(--preview-accent), var(--preview-primary));
+    font-weight: 800;
+}
+
+.branding-preview-sidebar strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.branding-preview-sidebar > span:last-child {
+    color: #b6bfd5;
+}
+
+.branding-preview-main {
+    display: grid;
+    align-content: center;
+    gap: 12px;
+    padding: 24px;
+}
+
+.branding-preview-main > span {
+    color: var(--muted);
+    font-size: .65rem;
+    font-weight: 800;
+}
+
+.branding-preview-main > strong {
+    color: var(--preview-primary);
+    font-family: "Manrope", "Segoe UI", system-ui, sans-serif;
+    font-size: 1.1rem;
+}
+
+.branding-preview-main > div {
+    display: flex;
+    gap: 7px;
+}
+
+.branding-preview-main i {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: var(--preview-primary);
+}
+
+.branding-preview-main i:nth-child(2) {
+    background: var(--preview-accent);
+}
+
+.branding-preview-main i:nth-child(3) {
+    background: var(--preview-sidebar);
+}
+
+.visual-identity-panel {
+    padding: 24px;
+}
+
+.form-intro {
+    margin: 0 0 20px;
+    color: var(--muted);
+    font-size: .84rem;
+}
+
 .admin-note {
     display: flex;
     align-items: flex-start;

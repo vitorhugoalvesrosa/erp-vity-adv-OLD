@@ -68,6 +68,14 @@ class CompanyProfile(models.Model):
             RegexValidator(r"^#[0-9A-Fa-f]{6}$", "Informe uma cor hexadecimal.")
         ],
     )
+    sidebar_color = models.CharField(
+        "Cor do menu lateral",
+        max_length=7,
+        default="#171D35",
+        validators=[
+            RegexValidator(r"^#[0-9A-Fa-f]{6}$", "Informe uma cor hexadecimal.")
+        ],
+    )
     accent_color = models.CharField(
         "Cor de destaque",
         max_length=7,

@@ -1,0 +1,154 @@
+body {
+    background: #f3f5f8;
+}
+
+#header {
+    display: flex;
+    min-height: 72px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 24px;
+    background: var(--erp-admin-sidebar);
+}
+
+#branding {
+    float: none;
+}
+
+.erp-admin-brand a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #fff;
+}
+
+.erp-admin-brand img,
+.erp-admin-brand-mark {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    place-items: center;
+    border-radius: 10px;
+    background: color-mix(in srgb, #fff 14%, transparent);
+    object-fit: contain;
+}
+
+.erp-admin-brand-mark {
+    border: 1px solid color-mix(in srgb, #fff 24%, transparent);
+    font-size: 19px;
+    font-weight: 800;
+}
+
+.erp-admin-brand a > span:last-child {
+    display: grid;
+    gap: 3px;
+}
+
+.erp-admin-brand strong {
+    color: #fff;
+    font-size: 16px;
+}
+
+.erp-admin-brand small {
+    color: #c6ccda;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+#user-tools {
+    padding: 0;
+    color: #d7dbe5;
+    font-size: 12px;
+}
+
+#user-tools a,
+.erp-admin-workspace {
+    color: #fff !important;
+}
+
+.erp-admin-workspace {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    padding: 0 12px;
+    border: 1px solid color-mix(in srgb, #fff 28%, transparent);
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.breadcrumbs {
+    padding: 11px 24px;
+    background: color-mix(in srgb, var(--erp-admin-primary) 10%, #fff);
+    color: #566176;
+}
+
+.breadcrumbs a,
+a:link,
+a:visited {
+    color: var(--erp-admin-primary);
+}
+
+#content h1 {
+    color: #17213a;
+    font-size: 24px;
+    font-weight: 750;
+}
+
+.module caption,
+.module h2,
+.module h3,
+#changelist-filter h2 {
+    background: var(--erp-admin-sidebar);
+}
+
+.module table th,
+.module table td {
+    padding: 10px 12px;
+}
+
+div.submit-row input,
+input.default,
+button.default,
+a.button,
+.button,
+input[type="submit"] {
+    border-radius: 6px;
+    background: var(--erp-admin-primary);
+}
+
+div.submit-row input:hover,
+input.default:hover,
+button.default:hover,
+a.button:hover,
+.button:hover,
+input[type="submit"]:hover {
+    background: color-mix(in srgb, var(--erp-admin-primary) 82%, #000);
+}
+
+.object-tools a,
+.object-tools a:link,
+.object-tools a:visited {
+    border-radius: 6px;
+    background: var(--erp-admin-accent);
+}
+
+#changelist-filter li.selected a {
+    color: var(--erp-admin-accent);
+}
+
+@media (max-width: 767px) {
+    #header {
+        gap: 12px;
+        padding: 10px 14px;
+    }
+
+    #user-tools {
+        text-align: right;
+    }
+
+    #content {
+        padding: 18px 14px;
+    }
+}
