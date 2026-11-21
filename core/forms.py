@@ -1,9 +1,10 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm
+from django.db import models
 
 from crm.models import Conta, Proposta
-from financeiro.models import ContaReceber, Pagamento, PedidoVenda
+from financeiro.models import Contrato, ContaReceber, Pagamento, PedidoVenda
 from produtos.models import Produto
 
 
@@ -75,6 +76,55 @@ class PedidoVendaForm(ERPModelForm):
     class Meta:
         model = PedidoVenda
         fields = ("proposta", "valor_final", "data_faturamento")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        queryset = Proposta.objects.filter(status=Proposta.Status.GANHA)
+        if self.instance.pk:
+            queryset = Proposta.objects.filter(
+                models.Q(status=Proposta.Status.GANHA)
+                | models.Q(pk=self.instance.proposta_id)
+            )
+        self.fields["proposta"].queryset = queryset.order_by("-data_validade")
+
+
+class ContratoForm(ERPModelForm):
+    class Meta:
+        model = Contrato
+        fields = (
+            "pedido_venda",
+            "contract_date",
+            "start_date",
+            "end_date",
+            "service_location",
+            "service_description",
+            "payment_terms",
+            "client_representative",
+            "termination_notice_days",
+            "additional_clauses",
+            "status",
+        )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        queryset = PedidoVenda.objects.filter(
+            proposta__status=Proposta.Status.GANHA,
+            contrato__isnull=True,
+        )
+        if self.instance.pk:
+            queryset = PedidoVenda.objects.filter(
+                models.Q(
+                    proposta__status=Proposta.Status.GANHA,
+                    contrato__isnull=True,
+                )
+                | models.Q(pk=self.instance.pedido_venda_id)
+            )
+        self.fields["pedido_venda"].queryset = queryset.select_related(
+            "proposta__conta"
+        )
+        self.fields["service_description"].widget.attrs["rows"] = 5
+        self.fields["payment_terms"].widget.attrs["rows"] = 4
+        self.fields["additional_clauses"].widget.attrs["rows"] = 4
 
 
 class ContaReceberForm(ERPModelForm):

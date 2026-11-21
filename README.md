@@ -30,6 +30,12 @@ Acesse `http://127.0.0.1:8000/` para entrar no sistema. O frontend inclui painel
 
 No cadastro de produtos, marque **É um serviço (não controla estoque)** para que a quantidade não seja mantida e apareça como não controlada.
 
+## Orçamentos e contratos
+
+Cadastre o orçamento no módulo **Orçamentos**. Quando ele for aprovado (status **Ganha**), o sistema cria automaticamente o pedido de venda e os recebíveis conforme a condição comercial; o pedido fica vinculado ao orçamento. Em **Pedidos de venda**, use **Gerar contrato** para preparar a minuta do serviço. Um pedido pode ter apenas um contrato. Preencha o escopo, local, vigência, condições de pagamento e representante do cliente; na lista de contratos, use **PDF para impressão** para gerar o documento com os dados e o logo da empresa. A minuta inclui cláusulas comerciais, confidencialidade, proteção de dados, propriedade intelectual, rescisão, foro e campos de assinatura. É um modelo de partida, que deve ser revisado por assessoria jurídica antes da assinatura e adequado a cada operação.
+
+O logo e as cores principais do sistema são configurados em **Administração → Empresa e integrações → Dados da empresa**. Envie um PNG, JPG ou WebP de até 2 MB; cores devem ser escolhidas nos seletores de cor.
+
 O menu lateral pode ser recolhido e reaberto e lembra a preferência no navegador. A área **Administração**, visível somente para superusuários, reúne atalhos para usuários, grupos/permissões e todos os registros gerenciados pelo Django Admin. O Django Admin fica em `/admin/` e só pode ser acessado por uma conta superusuária (`admin`). O login e os recursos de negócio ficam no frontend próprio.
 
 `create_erp_users` solicita senhas sem exibi-las, valida cada senha e cria ou atualiza as contas `admin`, `gerente` e `operador`. Use senhas fortes e exclusivas; elas não devem ser incluídas no repositório ou na documentação.
@@ -58,7 +64,7 @@ O deploy atualiza os grupos e suas permissões após aplicar as migrations.
 
 - `crm`: contas (leads, negociações e clientes) e propostas comerciais.
 - `produtos`: catálogo, SKU, preços e quantidade em estoque.
-- `financeiro`: pedidos de venda, contas a receber e pagamentos.
+- `financeiro`: pedidos de venda, contratos, contas a receber e pagamentos.
 - `pdv`: tela independente de caixa, movimentações, vendas com pagamentos divididos e histórico persistido no ERP.
 - `core`: frontend, autenticação, comunicação por e-mail e configuração do projeto Django em `erp_vity`.
 

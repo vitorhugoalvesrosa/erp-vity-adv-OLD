@@ -1,7 +1,10 @@
 import os
 import secrets
+from datetime import date
+from io import BytesIO
 from datetime import datetime, timedelta, timezone as datetime_timezone
 from io import StringIO
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from cryptography import x509
@@ -22,17 +25,22 @@ from django.http import HttpResponse
 from django.urls import resolve, reverse
 from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from rest_framework.test import APIClient
+from PIL import Image as PILImage
 
-from crm.models import Conta
+from crm.models import Conta, Proposta
 from core.admin_site import ERPAdminAuthenticationForm, erp_admin_site
 from core.access_control import MANAGER_GROUP, OPERATOR_GROUP, setup_access_groups
 from core.configuration_forms import A1CertificateForm, CompanyProfileForm, SMTPConfigurationForm
 from core.email_config import get_smtp_settings
+from core.forms import ContratoForm
 from core.management.commands.bootstrap_erp_users import BOOTSTRAP_NAME
-from core.models import A1Certificate, ERPAdminPasswordReset, ERPUserBootstrap, SMTPConfiguration
+from core.models import A1Certificate, CompanyProfile, ERPAdminPasswordReset, ERPUserBootstrap, SMTPConfiguration
 from core.secure_storage import decrypt_bytes, decrypt_text
 from core.views import (
     administration,
+    company_logo,
+    contract_pdf,
+    generate_sale_order,
     home,
     record_delete,
     record_edit,
@@ -40,6 +48,7 @@ from core.views import (
     send_notice,
 )
 from produtos.models import Produto
+from financeiro.models import Contrato, PedidoVenda
 
 
 class HomePageRouteTests(SimpleTestCase):
@@ -69,6 +78,11 @@ class HomePageRouteTests(SimpleTestCase):
             with self.subTest(route=name):
                 self.assertEqual(reverse(name), path)
 
+        self.assertEqual(
+            reverse("generate-sale-order", args=[1]),
+            "/app/orcamentos/1/gerar-pedido/",
+        )
+        self.assertEqual(reverse("contract-pdf", args=[1]), "/app/contratos/1/pdf/")
         self.assertEqual(
             reverse("record-list", kwargs={"module": "produtos"}),
             "/app/produtos/",
@@ -457,6 +471,103 @@ class EmailModuleTests(TestCase):
         self.assertEqual(mail.outbox, [])
 
 
+class ContractWorkflowTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        user_model = get_user_model()
+        cls.manager = user_model.objects.create_user(
+            username="contract-manager",
+            password="test-password",
+            is_staff=True,
+        )
+        cls.manager.groups.add(setup_access_groups()[MANAGER_GROUP])
+
+    def setUp(self):
+        self.client.force_login(self.manager)
+        account = Conta.objects.create(
+            nome="Cliente de serviços",
+            documento="12345678901",
+        )
+        self.proposal = Proposta.objects.create(
+            conta=account,
+            valor_total="2500.00",
+            status=Proposta.Status.RASCUNHO,
+            data_validade=date(2026, 12, 31),
+        )
+
+    def test_approved_budget_generates_a_sale_order(self):
+        self.proposal.status = Proposta.Status.GANHA
+        self.proposal.save(update_fields=["status"])
+
+        response = self.client.post(
+            reverse("generate-sale-order", args=[self.proposal.pk])
+        )
+
+        self.assertRedirects(response, reverse("record-list", args=["pedidos"]))
+        order = PedidoVenda.objects.get(proposta=self.proposal)
+        self.assertEqual(str(order.valor_final), self.proposal.valor_total)
+        self.assertEqual(order.data_faturamento, self.proposal.data_validade)
+
+    def test_unapproved_budget_cannot_generate_a_sale_order(self):
+        response = self.client.post(
+            reverse("generate-sale-order", args=[self.proposal.pk])
+        )
+
+        self.assertRedirects(response, reverse("record-list", args=["propostas"]))
+        self.assertFalse(PedidoVenda.objects.filter(proposta=self.proposal).exists())
+
+    def test_contract_form_and_pdf_are_bound_to_the_approved_order(self):
+        self.proposal.status = Proposta.Status.GANHA
+        self.proposal.save(update_fields=["status"])
+        order = PedidoVenda.objects.get(proposta=self.proposal)
+        form = ContratoForm()
+        self.assertQuerySetEqual(form.fields["pedido_venda"].queryset, [order])
+        contract = Contrato.objects.create(
+            pedido_venda=order,
+            service_description="Manutenção preventiva mensal do sistema.",
+            payment_terms="5 parcelas mensais de R$ 500,00.",
+        )
+        self.assertFalse(ContratoForm().fields["pedido_venda"].queryset.exists())
+
+        response = self.client.get(reverse("contract-pdf", args=[contract.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertTrue(response.content.startswith(b"%PDF-"))
+
+    def test_company_logo_and_colors_are_applied_to_the_system(self):
+        with TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+            image_data = BytesIO()
+            PILImage.new("RGB", (20, 20), color="red").save(image_data, format="PNG")
+            form = CompanyProfileForm(
+                data={
+                    "legal_name": "Prestadora de Serviços Ltda.",
+                    "trade_name": "Serviços Vity",
+                    "cnpj": "12345678901234",
+                    "tax_regime": CompanyProfile.TaxRegime.SIMPLES,
+                    "city": "São Paulo",
+                    "state": "SP",
+                    "primary_color": "#123456",
+                    "accent_color": "#298765",
+                },
+                files={
+                    "logo": SimpleUploadedFile(
+                        "marca.png", image_data.getvalue(), content_type="image/png"
+                    )
+                },
+            )
+            self.assertTrue(form.is_valid(), form.errors)
+            form.save()
+
+            dashboard = self.client.get(reverse("home"))
+            logo = self.client.get(reverse("company-logo"))
+
+        self.assertContains(dashboard, "--blue: #123456")
+        self.assertContains(dashboard, "Serviços Vity")
+        self.assertEqual(logo.status_code, 200)
+        self.assertEqual(logo["Content-Type"], "image/png")
+
+
 class FrontendPermissionTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -535,6 +646,8 @@ class FrontendPermissionTests(TestCase):
         self.assertIn("Visão geral", dashboard.content.decode())
         self.assertIn('id="menu-toggle"', dashboard.content.decode())
         self.assertIn('data-menu-group="crm"', dashboard.content.decode())
+        self.assertIn("Orçamentos", dashboard.content.decode())
+        self.assertIn('id="icon-overview"', dashboard.content.decode())
         self.assertIn('aria-controls="nav-finance"', dashboard.content.decode())
         self.assertIn(
             'href="/pdv/" target="_blank" rel="noopener"',

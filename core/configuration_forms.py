@@ -21,6 +21,52 @@ class CompanyProfileForm(forms.ModelForm):
         model = CompanyProfile
         exclude = ("created_at", "updated_at")
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name in ("primary_color", "accent_color"):
+            self.fields[field_name].required = False
+            self.fields[field_name].widget = forms.TextInput(
+                attrs={"type": "color", "class": "vTextField"}
+            )
+        self.fields["logo"].widget.attrs["accept"] = "image/png,image/jpeg,image/webp"
+
+    def clean_primary_color(self):
+        return self.cleaned_data.get("primary_color") or (
+            self.instance.primary_color
+            if self.instance.pk
+            else CompanyProfile._meta.get_field("primary_color").get_default()
+        )
+
+    def clean_accent_color(self):
+        return self.cleaned_data.get("accent_color") or (
+            self.instance.accent_color
+            if self.instance.pk
+            else CompanyProfile._meta.get_field("accent_color").get_default()
+        )
+
+    def clean_logo(self):
+        logo = self.cleaned_data.get("logo")
+        if not logo or not hasattr(logo, "read"):
+            return logo
+        if logo.size > 2 * 1024 * 1024:
+            raise ValidationError("O logo não pode exceder 2 MB.")
+        if Path(logo.name).suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
+            raise ValidationError("Envie um logo PNG, JPG ou WebP.")
+        try:
+            from PIL import Image
+
+            image = Image.open(logo)
+            image.verify()
+            if image.width > 2048 or image.height > 2048:
+                raise ValidationError("As dimensões do logo não podem exceder 2048 px.")
+        except ValidationError:
+            raise
+        except Exception as exc:
+            raise ValidationError("O arquivo enviado não é uma imagem válida.") from exc
+        finally:
+            logo.seek(0)
+        return logo
+
     def clean_cnpj(self):
         return re.sub(r"[\s./-]", "", self.cleaned_data["cnpj"]).upper()
 

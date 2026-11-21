@@ -43,9 +43,10 @@
         <article class="panel admin-card">
             <span class="admin-card-icon tone-blue">R$</span>
             <h2>Financeiro</h2>
-            <p>Acesse pedidos de venda, recebíveis e pagamentos.</p>
+            <p>Acesse pedidos de venda, contratos, recebíveis e pagamentos.</p>
             <div class="admin-card-links">
                 <a class="text-link" href="{% url 'admin:financeiro_pedidovenda_changelist' %}">Pedidos →</a>
+                <a class="text-link" href="{% url 'admin:financeiro_contrato_changelist' %}">Contratos →</a>
                 <a class="text-link" href="{% url 'admin:financeiro_contareceber_changelist' %}">Contas a receber →</a>
                 <a class="text-link" href="{% url 'admin:financeiro_pagamento_changelist' %}">Pagamentos →</a>
             </div>

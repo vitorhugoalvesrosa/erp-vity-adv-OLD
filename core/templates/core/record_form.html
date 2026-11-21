@@ -5,7 +5,7 @@
         <div>
             <p class="eyebrow">{{ module.title }}</p>
             <h1>{{ page_title }}</h1>
-            <p>Preencha os campos abaixo para salvar as informações.</p>
+            <p>{% if active_module == "contratos" %}Complete o escopo, as condições comerciais e a vigência antes de emitir a minuta em PDF.{% else %}Preencha os campos abaixo para salvar as informações.{% endif %}</p>
         </div>
     </header>
 

@@ -1,4 +1,6 @@
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 from crm.models import Conta, Proposta
 
@@ -19,6 +21,64 @@ class PedidoVenda(models.Model):
 
     def __str__(self):
         return f"Pedido {self.pk} - {self.proposta.conta.nome}"
+
+
+class Contrato(models.Model):
+    class Status(models.TextChoices):
+        RASCUNHO = "rascunho", "Rascunho"
+        AGUARDANDO_ASSINATURA = "aguardando_assinatura", "Aguardando assinatura"
+        ATIVO = "ativo", "Ativo"
+        CONCLUIDO = "concluido", "Concluído"
+        RESCINDIDO = "rescindido", "Rescindido"
+
+    pedido_venda = models.OneToOneField(
+        PedidoVenda,
+        on_delete=models.PROTECT,
+        related_name="contrato",
+        verbose_name="Pedido de venda",
+    )
+    contract_date = models.DateField("Data do contrato", default=timezone.localdate)
+    start_date = models.DateField("Início da vigência", default=timezone.localdate)
+    end_date = models.DateField("Fim da vigência", blank=True, null=True)
+    service_location = models.CharField("Local da prestação", max_length=255, blank=True)
+    service_description = models.TextField("Objeto e escopo dos serviços")
+    payment_terms = models.TextField("Condições de pagamento")
+    client_representative = models.CharField(
+        "Representante do contratante", max_length=255, blank=True
+    )
+    termination_notice_days = models.PositiveSmallIntegerField(
+        "Aviso prévio para rescisão (dias)", default=30
+    )
+    additional_clauses = models.TextField("Condições adicionais", blank=True)
+    status = models.CharField(
+        "Status",
+        max_length=24,
+        choices=Status.choices,
+        default=Status.RASCUNHO,
+    )
+    created_at = models.DateTimeField("Criado em", auto_now_add=True)
+    updated_at = models.DateTimeField("Atualizado em", auto_now=True)
+
+    class Meta:
+        ordering = ["-contract_date", "-id"]
+        verbose_name = "Contrato"
+        verbose_name_plural = "Contratos"
+
+    def clean(self):
+        super().clean()
+        if self.end_date and self.start_date and self.end_date < self.start_date:
+            raise ValidationError({"end_date": "O fim da vigência deve ser posterior ao início."})
+
+    @property
+    def number(self):
+        return f"CTR-{self.contract_date.year}-{self.pk:06d}" if self.pk else "Novo contrato"
+
+    @property
+    def cliente(self):
+        return self.pedido_venda.proposta.conta.nome
+
+    def __str__(self):
+        return f"{self.number} - {self.pedido_venda.proposta.conta.nome}"
 
 
 class ContaReceber(models.Model):

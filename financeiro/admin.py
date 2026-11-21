@@ -1,13 +1,21 @@
 from django.contrib import admin
 
 from core.admin_site import erp_admin_site
-from .models import ContaReceber, Pagamento, PedidoVenda
+from .models import ContaReceber, Contrato, Pagamento, PedidoVenda
 
 
 @admin.register(PedidoVenda, site=erp_admin_site)
 class PedidoVendaAdmin(admin.ModelAdmin):
     list_display = ("id", "proposta", "valor_final", "data_faturamento")
     list_filter = ("data_faturamento",)
+
+
+@admin.register(Contrato, site=erp_admin_site)
+class ContratoAdmin(admin.ModelAdmin):
+    list_display = ("number", "pedido_venda", "status", "start_date", "end_date")
+    list_filter = ("status", "start_date")
+    search_fields = ("pedido_venda__proposta__conta__nome",)
+    readonly_fields = ("created_at", "updated_at")
 
 
 @admin.register(ContaReceber, site=erp_admin_site)

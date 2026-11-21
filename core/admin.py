@@ -48,6 +48,10 @@ class CompanyProfileAdmin(admin.ModelAdmin):
             },
         ),
         ("Contato", {"fields": ("phone", "email")}),
+        (
+            "Identidade visual",
+            {"fields": ("logo", "primary_color", "accent_color")},
+        ),
     )
 
     def has_add_permission(self, request):

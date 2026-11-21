@@ -8,12 +8,29 @@
     <title>{{ page_title }} | ERP Vity</title>
     <link rel="stylesheet" href="{% static 'core/app.css' %}">
 </head>
-<body>
+<body style="--blue: {{ company_profile.primary_color|default:'#5968E8' }}; --mint: {{ company_profile.accent_color|default:'#36B89B' }}">
+    <svg class="icon-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+        <symbol id="icon-overview" viewBox="0 0 24 24"><path d="M4 13a8 8 0 1 1 16 0"/><path d="M12 13l4-4M5 18h14"/><path d="M4.5 13H7m10 0h2.5"/></symbol>
+        <symbol id="icon-clients" viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13"/><path d="M8 21v-6h8v6M7 10h.01M12 10h.01M17 10h.01"/></symbol>
+        <symbol id="icon-budget" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7m-7 4h7"/></symbol>
+        <symbol id="icon-products" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5M12 13v8"/></symbol>
+        <symbol id="icon-orders" viewBox="0 0 24 24"><path d="M3 4h2l2.2 11h10.9l2-8H6"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></symbol>
+        <symbol id="icon-contract" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7m-7 3h7m-7 3h4"/><path d="m14 18 1.5 1.5L19 16"/></symbol>
+        <symbol id="icon-pos" viewBox="0 0 24 24"><path d="M4 10h16l-1.5-6h-13L4 10Z"/><path d="M5 10v10h14V10M9 20v-6h6v6M4 10a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0"/></symbol>
+        <symbol id="icon-receivable" viewBox="0 0 24 24"><path d="M3 7h18v13H3zM3 7l2-3h14l2 3"/><path d="M16 13h5m-13 0h4"/><circle cx="8" cy="13" r="1"/></symbol>
+        <symbol id="icon-payment" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 10h18m-13 5h4"/></symbol>
+        <symbol id="icon-email" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></symbol>
+        <symbol id="icon-settings" viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="m19.4 15 .1.1 1.1.9-1.5 2.6-1.4-.5a8 8 0 0 1-1.7 1l-.2 1.5h-3l-.2-1.5a8 8 0 0 1-1.7-1l-1.4.5-1.5-2.6 1.1-.9a8 8 0 0 1 0-2l-1.1-.9 1.5-2.6 1.4.5a8 8 0 0 1 1.7-1L12.8 7h3l.2 1.5a8 8 0 0 1 1.7 1l1.4-.5 1.5 2.6-1.1.9a8 8 0 0 1-.1 2Z"/></symbol>
+    </svg>
     <div class="app-shell">
         <aside class="sidebar" id="app-sidebar">
             <a class="brand" href="{% url 'home' %}">
-                <span class="brand-mark" aria-hidden="true">V</span>
-                <span class="brand-copy">ERP Vity<small>Gestão integrada</small></span>
+                {% if company_profile.logo %}
+                    <img class="brand-logo" src="{% url 'company-logo' %}" alt="Logo {{ company_profile.trade_name|default:company_profile.legal_name }}">
+                {% else %}
+                    <span class="brand-mark" aria-hidden="true">V</span>
+                {% endif %}
+                <span class="brand-copy">{{ company_display_name }}<small>Gestão integrada</small></span>
             </a>
 
             <button class="nav-label nav-group-toggle" type="button" data-menu-group="workspace" aria-expanded="true" aria-controls="nav-workspace">
@@ -21,7 +38,7 @@
             </button>
             <nav class="sidebar-nav" id="nav-workspace" aria-label="Navegação principal">
                 <a class="nav-link {% if active_module == 'dashboard' %}is-active{% endif %}" href="{% url 'home' %}">
-                    <span class="nav-icon">OV</span> Visão geral
+                    <svg class="nav-icon" aria-hidden="true"><use href="#icon-overview"></use></svg> Visão geral
                 </a>
             </nav>
 
@@ -32,12 +49,12 @@
                 <nav class="sidebar-nav" id="nav-crm" aria-label="CRM e vendas">
                     {% if perms.crm.view_conta %}
                         <a class="nav-link {% if active_module == 'contas' %}is-active{% endif %}" href="{% url 'record-list' module='contas' %}">
-                            <span class="nav-icon">CRM</span> Contas e clientes
+                            <svg class="nav-icon" aria-hidden="true"><use href="#icon-clients"></use></svg> Contas e clientes
                         </a>
                     {% endif %}
                     {% if perms.crm.view_proposta %}
                         <a class="nav-link {% if active_module == 'propostas' %}is-active{% endif %}" href="{% url 'record-list' module='propostas' %}">
-                            <span class="nav-icon">PV</span> Propostas
+                            <svg class="nav-icon" aria-hidden="true"><use href="#icon-budget"></use></svg> Orçamentos
                         </a>
                     {% endif %}
                 </nav>
@@ -50,19 +67,30 @@
                 <nav class="sidebar-nav" id="nav-operations" aria-label="Operação">
                     {% if perms.produtos.view_produto %}
                         <a class="nav-link {% if active_module == 'produtos' %}is-active{% endif %}" href="{% url 'record-list' module='produtos' %}">
-                            <span class="nav-icon">SKU</span> Produtos e estoque
+                            <svg class="nav-icon" aria-hidden="true"><use href="#icon-products"></use></svg> Produtos e estoque
                         </a>
                     {% endif %}
                     {% if perms.financeiro.view_pedidovenda %}
                         <a class="nav-link {% if active_module == 'pedidos' %}is-active{% endif %}" href="{% url 'record-list' module='pedidos' %}">
-                            <span class="nav-icon">PV</span> Pedidos de venda
+                            <svg class="nav-icon" aria-hidden="true"><use href="#icon-orders"></use></svg> Pedidos de venda
                         </a>
                     {% endif %}
                     {% if perms.pdv.view_sale %}
                         <a class="nav-link {% if active_module == 'pdv' %}is-active{% endif %}" href="{% url 'pdv:terminal' %}" target="_blank" rel="noopener">
-                            <span class="nav-icon">PDV</span> Ponto de venda
+                            <svg class="nav-icon" aria-hidden="true"><use href="#icon-pos"></use></svg> Ponto de venda
                         </a>
                     {% endif %}
+                </nav>
+            {% endif %}
+
+            {% if perms.financeiro.view_contrato %}
+                <button class="nav-label nav-group-toggle" type="button" data-menu-group="contracts" aria-expanded="true" aria-controls="nav-contracts">
+                    <span>Contratos</span><span class="nav-group-indicator" aria-hidden="true">⌄</span>
+                </button>
+                <nav class="sidebar-nav" id="nav-contracts" aria-label="Contratos">
+                    <a class="nav-link {% if active_module == 'contratos' %}is-active{% endif %}" href="{% url 'record-list' module='contratos' %}">
+                        <svg class="nav-icon" aria-hidden="true"><use href="#icon-contract"></use></svg> Contratos de serviço
+                    </a>
                 </nav>
             {% endif %}
 
@@ -73,12 +101,12 @@
                 <nav class="sidebar-nav" id="nav-finance" aria-label="Financeiro">
                     {% if perms.financeiro.view_contareceber %}
                         <a class="nav-link {% if active_module == 'recebiveis' %}is-active{% endif %}" href="{% url 'record-list' module='recebiveis' %}">
-                            <span class="nav-icon">R$</span> Contas a receber
+                            <svg class="nav-icon" aria-hidden="true"><use href="#icon-receivable"></use></svg> Contas a receber
                         </a>
                     {% endif %}
                     {% if perms.financeiro.view_pagamento %}
                         <a class="nav-link {% if active_module == 'pagamentos' %}is-active{% endif %}" href="{% url 'record-list' module='pagamentos' %}">
-                            <span class="nav-icon">PIX</span> Pagamentos
+                            <svg class="nav-icon" aria-hidden="true"><use href="#icon-payment"></use></svg> Pagamentos
                         </a>
                     {% endif %}
                 </nav>
@@ -90,7 +118,7 @@
                 </button>
                 <nav class="sidebar-nav" id="nav-communication" aria-label="Comunicação">
                     <a class="nav-link {% if active_module == 'email' %}is-active{% endif %}" href="{% url 'send-email-notice' %}">
-                        <span class="nav-icon">@</span> E-mails
+                        <svg class="nav-icon" aria-hidden="true"><use href="#icon-email"></use></svg> E-mails
                     </a>
                 </nav>
             {% endif %}
@@ -102,7 +130,7 @@
                 </button>
                 <nav class="sidebar-nav" id="nav-administration" aria-label="Administração">
                     <a class="nav-link {% if active_module == 'administration' %}is-active{% endif %}" href="{% url 'admin-settings' %}">
-                        <span class="nav-icon">AD</span> Configurações
+                        <svg class="nav-icon" aria-hidden="true"><use href="#icon-settings"></use></svg> Configurações
                     </a>
                 </nav>
             {% endif %}
@@ -120,7 +148,7 @@
             <header class="topbar">
                 <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Ocultar menu lateral" aria-controls="app-sidebar" aria-expanded="true">☰</button>
                 <div class="topbar-title">
-                    <span>ERP Vity <span aria-hidden="true">/</span> workspace</span>
+                    <span>{{ company_display_name }} <span aria-hidden="true">/</span> workspace</span>
                     <strong>{{ page_title }}</strong>
                 </div>
                 <div class="topbar-actions">

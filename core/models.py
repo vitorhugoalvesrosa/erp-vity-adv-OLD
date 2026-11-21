@@ -59,6 +59,21 @@ class CompanyProfile(models.Model):
     state = models.CharField("UF", max_length=2, default="RJ")
     phone = models.CharField("Telefone", max_length=30, blank=True)
     email = models.EmailField("E-mail da empresa", blank=True)
+    logo = models.ImageField("Logo", upload_to="company/logos/", blank=True)
+    primary_color = models.CharField(
+        "Cor principal",
+        max_length=7,
+        default="#5968E8",
+        validators=[
+            RegexValidator(r"^#[0-9A-Fa-f]{6}$", "Informe uma cor hexadecimal.")
+        ],
+    )
+    accent_color = models.CharField(
+        "Cor de destaque",
+        max_length=7,
+        default="#36B89B",
+        validators=[RegexValidator(r"^#[0-9A-Fa-f]{6}$", "Informe uma cor hexadecimal.")],
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
