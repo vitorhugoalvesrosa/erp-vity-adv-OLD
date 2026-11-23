@@ -49,6 +49,7 @@ from core.views import (
 )
 from produtos.models import Produto
 from financeiro.models import Contrato, PedidoVenda
+from juridico.models import Prazo, Processo, Publicacao, Tarefa
 
 
 class HomePageRouteTests(SimpleTestCase):
@@ -88,6 +89,142 @@ class HomePageRouteTests(SimpleTestCase):
             reverse("record-list", kwargs={"module": "produtos"}),
             "/app/produtos/",
         )
+
+
+class JuridicoMvpTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        groups = setup_access_groups()
+        cls.manager = get_user_model().objects.create_user(
+            username="juridico-manager",
+            password="test-password",
+            is_staff=True,
+        )
+        cls.manager.groups.add(groups[MANAGER_GROUP])
+        cls.conta = Conta.objects.create(
+            nome="Cliente Jurídico",
+            documento="12345678000190",
+            status=Conta.Status.CLIENTE,
+        )
+
+    def test_manager_can_create_process_via_api(self):
+        client = APIClient()
+        client.force_authenticate(user=self.manager)
+        response = client.post(
+            "/api/juridico/processos/",
+            {
+                "numero_cnj": "0000001-00.2026.8.19.0001",
+                "titulo": "Revisão contratual",
+                "cliente": self.conta.pk,
+                "parte_contraria": "Empresa Exemplo",
+                "tribunal": "TJRJ",
+                "vara": "1ª Vara Cível",
+                "area": "civel",
+                "status": "ativo",
+                "responsavel": self.manager.pk,
+                "valor_causa": "1000.00",
+                "observacoes": "",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+
+    def test_dashboard_counts_active_deadlines_and_publications(self):
+        processo = Processo.objects.create(
+            numero_cnj="0000002-00.2026.8.19.0001",
+            titulo="Cobrança",
+            cliente=self.conta,
+            tribunal="TJRJ",
+            responsavel=self.manager,
+        )
+        Prazo.objects.create(
+            processo=processo,
+            titulo="Manifestação",
+            responsavel=self.manager,
+            data_vencimento=date.today(),
+        )
+        Publicacao.objects.create(
+            processo=processo,
+            monitoramento="12345678000190",
+            tribunal="TJRJ",
+            titulo="Intimação urgente",
+            conteudo="Prazo identificado",
+            publicada_em=date.today(),
+            urgente=True,
+        )
+        request = RequestFactory().get("/")
+        request.user = self.manager
+        response = home(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_juridical_api_supports_filters_actions_and_summaries(self):
+        processo = Processo.objects.create(
+            numero_cnj="0000003-00.2026.8.19.0001",
+            titulo="Ação empresarial",
+            cliente=self.conta,
+            tribunal="TRF2",
+            area=Processo.Area.EMPRESARIAL,
+            status=Processo.Status.ATIVO,
+            responsavel=self.manager,
+        )
+        tarefa = Tarefa.objects.create(
+            processo=processo,
+            titulo="Revisar contrato",
+            responsavel=self.manager,
+            prioridade=Tarefa.Prioridade.ALTA,
+        )
+        publicacao = Publicacao.objects.create(
+            processo=processo,
+            monitoramento="12345678000190",
+            tribunal="TRF2",
+            titulo="Intimação",
+            conteudo="Publicação para análise",
+            publicada_em=date.today(),
+            urgente=True,
+        )
+        client = APIClient()
+        client.force_authenticate(user=self.manager)
+
+        process_filter = client.get(
+            "/api/juridico/processos/",
+            {"area": "empresarial", "status": "ativo", "search": "empresarial"},
+        )
+        process_summary = client.get("/api/juridico/processos/resumo/")
+        task_action = client.post(f"/api/juridico/tarefas/{tarefa.pk}/concluir/")
+        publication_action = client.post(
+            f"/api/juridico/publicacoes/{publicacao.pk}/processar/"
+        )
+
+        self.assertEqual(process_filter.status_code, 200)
+        self.assertEqual(process_summary.status_code, 200)
+        self.assertTrue(
+            any(row["numero_cnj"] == processo.numero_cnj for row in process_filter.data)
+        )
+        self.assertEqual(task_action.status_code, 200)
+        self.assertEqual(task_action.data["status"], "concluida")
+        self.assertEqual(publication_action.status_code, 200)
+        self.assertTrue(publication_action.data["processada"])
+
+    def test_operator_can_read_but_not_create_juridical_records(self):
+        user_model = get_user_model()
+        operator = user_model.objects.create_user(
+            username="juridico-operator",
+            password="test-password",
+            is_staff=True,
+        )
+        operator.groups.add(setup_access_groups()[OPERATOR_GROUP])
+        client = APIClient()
+        client.force_authenticate(user=operator)
+
+        list_response = client.get("/api/juridico/processos/")
+        create_response = client.post(
+            "/api/juridico/processos/",
+            {"titulo": "Não autorizado"},
+            format="json",
+        )
+
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(create_response.status_code, 403)
 
 
 class ApiRolePermissionTests(TestCase):

@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "financeiro",
     "produtos",
     "pdv.apps.PdvConfig",
+    "juridico.apps.JuridicoConfig",
 ]
 
 MIDDLEWARE = [
@@ -48,7 +49,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "erp_vity.urls"
+ROOT_URLCONF = "erp_vity_adv.urls"
 LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/login/"
@@ -69,7 +70,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "erp_vity.wsgi.application"
+WSGI_APPLICATION = "erp_vity_adv.wsgi.application"
 
 database_url = os.getenv("DATABASE_URL")
 if database_url:
@@ -85,7 +86,7 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("DB_NAME", "erp_vity"),
+            "NAME": os.getenv("DB_NAME", "erp_vity_adv"),
             "USER": os.getenv("DB_USER", "postgres"),
             "PASSWORD": os.getenv("DB_PASSWORD", "postgres"),
             "HOST": os.getenv("DB_HOST", "localhost"),

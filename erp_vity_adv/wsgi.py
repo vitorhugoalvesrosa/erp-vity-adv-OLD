@@ -2,6 +2,6 @@ from django.core.wsgi import get_wsgi_application
 
 import os
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "erp_vity.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "erp_vity_adv.settings")
 
 application = get_wsgi_application()

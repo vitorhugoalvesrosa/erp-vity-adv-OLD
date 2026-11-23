@@ -1,6 +1,6 @@
-# ERP Vity
+# ERP Vity ADV
 
-ERP Vity com interface web em Django, API REST para CRM, produtos e financeiro, e painel administrativo restrito.
+ERP Vity ADV é uma plataforma jurídica e comercial em Django, com API REST para CRM, jurídico, produtos e financeiro.
 
 ## Requisitos
 
@@ -66,9 +66,42 @@ O deploy atualiza os grupos e suas permissões após aplicar as migrations.
 - `produtos`: catálogo, SKU, preços e quantidade em estoque.
 - `financeiro`: pedidos de venda, contratos, contas a receber e pagamentos.
 - `pdv`: tela independente de caixa, movimentações, vendas com pagamentos divididos e histórico persistido no ERP.
-- `core`: frontend, autenticação, comunicação por e-mail e configuração do projeto Django em `erp_vity`.
+- `core`: frontend, autenticação, comunicação por e-mail e configuração do projeto Django em `erp_vity_adv`.
 
 As alterações de esquema do banco estão registradas nas migrations de cada aplicação.
+
+## Operação jurídica
+
+O módulo `juridico` adiciona uma base própria para escritórios e operações jurídicas:
+
+- cadastro de processos com número CNJ, tribunal, vara, área, responsável e valor da causa;
+- movimentações processuais com origem manual ou integrada;
+- prazos com responsável, vencimento e status;
+- agenda e tarefas por processo;
+- publicações e monitoramento de CPF, CNPJ ou OAB;
+- indicadores de processos ativos, prazos abertos e publicações urgentes no painel.
+
+A API jurídica está disponível em:
+
+| Recurso | Endpoint |
+| --- | --- |
+| Processos | `/api/juridico/processos/` |
+| Movimentações | `/api/juridico/movimentacoes/` |
+| Prazos | `/api/juridico/prazos/` |
+| Tarefas | `/api/juridico/tarefas/` |
+| Publicações | `/api/juridico/publicacoes/` |
+
+As APIs jurídicas usam autenticação JWT ou sessão, respeitam as permissões dos perfis e suportam busca, filtros e ordenação.
+
+Exemplos:
+
+- `/api/juridico/processos/?search=CNJ&status=ativo&area=civel`
+- `/api/juridico/prazos/?vencidos=true&responsavel=1`
+- `/api/juridico/tarefas/?status=pendente&prioridade=urgente`
+- `/api/juridico/publicacoes/?urgente=true&processada=false`
+- `/api/juridico/processos/resumo/`
+- `POST /api/juridico/tarefas/ID/concluir/`
+- `POST /api/juridico/publicacoes/ID/processar/`
 
 O PDV abre em uma nova aba sem a navegação geral do ERP. A operação comercial não depende de cadastro fiscal nem de comunicação com a SEFAZ: ao concluir uma pré-venda, o sistema registra a venda no ERP, atualiza o estoque de mercadorias e o caixa para valores recebidos em dinheiro. Pix e cartões são lançamentos manuais; o sistema não processa transações. A emissão de documentos fiscais permanece pendente e nenhuma NFS-e ou NFC-e é enviada pelo PDV.
 

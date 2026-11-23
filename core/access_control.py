@@ -5,7 +5,7 @@ from django.db.models import Q
 ADMIN_GROUP = "Administrador"
 MANAGER_GROUP = "Gerente"
 OPERATOR_GROUP = "Operador"
-BUSINESS_APP_LABELS = {"crm", "financeiro", "produtos", "pdv"}
+BUSINESS_APP_LABELS = {"crm", "financeiro", "produtos", "pdv", "juridico"}
 OPERATOR_PDV_PERMISSIONS = {
     "add_cashregister",
     "change_cashregister",

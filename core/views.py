@@ -25,6 +25,7 @@ from reportlab.platypus import Image, KeepTogether, Paragraph, SimpleDocTemplate
 
 from crm.models import Conta, Proposta
 from financeiro.models import Contrato, ContaReceber, Pagamento, PedidoVenda
+from juridico.models import Movimentacao, Prazo, Processo, Publicacao, Tarefa
 from produtos.models import Produto
 from .email_config import get_smtp_settings
 from .configuration_forms import CompanyVisualIdentityForm
@@ -38,11 +39,99 @@ from .forms import (
     PedidoVendaForm,
     ProdutoForm,
     PropostaForm,
+    MovimentacaoForm,
+    PrazoForm,
+    ProcessoForm,
+    PublicacaoForm,
+    TarefaForm,
 )
 from .models import CompanyProfile
 
 
 MODULES = {
+    "processos": {
+        "title": "Processos",
+        "singular": "processo",
+        "app": "juridico",
+        "model": Processo,
+        "form": ProcessoForm,
+        "columns": [
+            ("numero_cnj", "Número CNJ", "text"),
+            ("titulo", "Processo", "text"),
+            ("cliente", "Cliente", "text"),
+            ("tribunal", "Tribunal", "text"),
+            ("area", "Área", "choice"),
+            ("status", "Status", "choice"),
+            ("responsavel", "Responsável", "text"),
+        ],
+        "search": ("numero_cnj", "titulo", "parte_contraria", "tribunal", "cliente__nome"),
+        "select_related": ("cliente", "responsavel"),
+    },
+    "movimentacoes": {
+        "title": "Movimentações",
+        "singular": "movimentação",
+        "app": "juridico",
+        "model": Movimentacao,
+        "form": MovimentacaoForm,
+        "columns": [
+            ("processo", "Processo", "text"),
+            ("data", "Data", "date"),
+            ("descricao", "Movimentação", "text"),
+            ("origem", "Origem", "text"),
+        ],
+        "search": ("descricao", "processo__numero_cnj", "processo__titulo"),
+        "select_related": ("processo",),
+    },
+    "prazos": {
+        "title": "Prazos",
+        "singular": "prazo",
+        "app": "juridico",
+        "model": Prazo,
+        "form": PrazoForm,
+        "columns": [
+            ("processo", "Processo", "text"),
+            ("titulo", "Prazo", "text"),
+            ("responsavel", "Responsável", "text"),
+            ("data_vencimento", "Vencimento", "date"),
+            ("status", "Status", "choice"),
+        ],
+        "search": ("titulo", "processo__numero_cnj", "responsavel__username"),
+        "select_related": ("processo", "responsavel"),
+    },
+    "tarefas": {
+        "title": "Agenda e tarefas",
+        "singular": "tarefa",
+        "app": "juridico",
+        "model": Tarefa,
+        "form": TarefaForm,
+        "columns": [
+            ("titulo", "Tarefa", "text"),
+            ("processo", "Processo", "text"),
+            ("responsavel", "Responsável", "text"),
+            ("prioridade", "Prioridade", "choice"),
+            ("vencimento", "Vencimento", "date"),
+            ("status", "Status", "choice"),
+        ],
+        "search": ("titulo", "descricao", "processo__numero_cnj"),
+        "select_related": ("processo", "responsavel"),
+    },
+    "publicacoes": {
+        "title": "Publicações e Radar",
+        "singular": "publicação",
+        "app": "juridico",
+        "model": Publicacao,
+        "form": PublicacaoForm,
+        "columns": [
+            ("processo", "Processo", "text"),
+            ("titulo", "Publicação", "text"),
+            ("tribunal", "Tribunal", "text"),
+            ("publicada_em", "Publicado em", "date"),
+            ("urgente", "Urgência", "boolean"),
+            ("processada", "Processada", "boolean"),
+        ],
+        "search": ("titulo", "conteudo", "monitoramento", "tribunal"),
+        "select_related": ("processo",),
+    },
     "contas": {
         "title": "Contas e clientes",
         "singular": "conta",
@@ -197,6 +286,43 @@ def home(request):
                 "tone": "amber",
                 "url": "record-list",
                 "module": "propostas",
+            }
+        )
+    if can_view(Processo):
+        stats.append(
+            {
+                "label": "Processos ativos",
+                "value": Processo.objects.filter(status=Processo.Status.ATIVO).count(),
+                "symbol": "PJ",
+                "tone": "violet",
+                "url": "record-list",
+                "module": "processos",
+            }
+        )
+    if can_view(Prazo):
+        open_deadlines = Prazo.objects.filter(status=Prazo.Status.ABERTO)
+        stats.append(
+            {
+                "label": "Prazos abertos",
+                "value": open_deadlines.count(),
+                "symbol": "PZ",
+                "tone": "amber",
+                "url": "record-list",
+                "module": "prazos",
+            }
+        )
+    if can_view(Publicacao):
+        stats.append(
+            {
+                "label": "Publicações urgentes",
+                "value": Publicacao.objects.filter(
+                    urgente=True,
+                    processada=False,
+                ).count(),
+                "symbol": "RD",
+                "tone": "mint",
+                "url": "record-list",
+                "module": "publicacoes",
             }
         )
 
@@ -484,7 +610,7 @@ def contract_pdf(request, pk):
         topMargin=20 * mm,
         bottomMargin=20 * mm,
         title=f"Contrato de Prestação de Serviços {contract.number}",
-        author=(company.trade_name or company.legal_name) if company else "ERP Vity",
+        author=(company.trade_name or company.legal_name) if company else "ERP Vity ADV",
     )
     base_styles = getSampleStyleSheet()
     title_style = ParagraphStyle(

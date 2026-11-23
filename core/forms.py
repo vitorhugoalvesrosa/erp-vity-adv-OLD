@@ -5,6 +5,7 @@ from django.db import models
 
 from crm.models import Conta, Proposta
 from financeiro.models import Contrato, ContaReceber, Pagamento, PedidoVenda
+from juridico.models import Movimentacao, Prazo, Processo, Publicacao, Tarefa
 from produtos.models import Produto
 
 
@@ -145,6 +146,65 @@ class PagamentoForm(ERPModelForm):
     class Meta:
         model = Pagamento
         fields = ("conta_receber", "valor", "data_pagamento", "metodo_pagamento")
+
+
+class ProcessoForm(ERPModelForm):
+    class Meta:
+        model = Processo
+        fields = (
+            "numero_cnj",
+            "titulo",
+            "cliente",
+            "parte_contraria",
+            "tribunal",
+            "vara",
+            "area",
+            "status",
+            "responsavel",
+            "valor_causa",
+            "observacoes",
+        )
+
+
+class MovimentacaoForm(ERPModelForm):
+    class Meta:
+        model = Movimentacao
+        fields = ("processo", "data", "descricao", "origem")
+
+
+class PrazoForm(ERPModelForm):
+    class Meta:
+        model = Prazo
+        fields = ("processo", "titulo", "responsavel", "data_vencimento", "status", "observacoes")
+
+
+class TarefaForm(ERPModelForm):
+    class Meta:
+        model = Tarefa
+        fields = (
+            "processo",
+            "titulo",
+            "descricao",
+            "responsavel",
+            "prioridade",
+            "status",
+            "vencimento",
+        )
+
+
+class PublicacaoForm(ERPModelForm):
+    class Meta:
+        model = Publicacao
+        fields = (
+            "processo",
+            "monitoramento",
+            "tribunal",
+            "titulo",
+            "conteudo",
+            "publicada_em",
+            "urgente",
+            "processada",
+        )
 
 
 class EmailNoticeForm(forms.Form):

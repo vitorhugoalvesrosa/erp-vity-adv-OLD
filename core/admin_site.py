@@ -14,8 +14,8 @@ class ERPAdminAuthenticationForm(AdminAuthenticationForm):
 
 
 class ERPAdminSite(AdminSite):
-    site_header = "ERP Vity · Administração"
-    site_title = "ERP Vity"
+    site_header = "ERP Vity ADV · Administração"
+    site_title = "ERP Vity ADV"
     index_title = "Configurações do sistema"
     login_form = ERPAdminAuthenticationForm
 

@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f5f6fb">
-    <title>{{ page_title }} | ERP Vity</title>
+    <title>{{ page_title }} | ERP Vity ADV</title>
     <link rel="stylesheet" href="{% static 'core/app.css' %}">
 </head>
 <body style="--blue: {{ company_profile.primary_color|default:'#5968E8' }}; --navy: {{ sidebar_color }}; --mint: {{ company_profile.accent_color|default:'#36B89B' }}">
@@ -19,6 +19,9 @@
         <symbol id="icon-pos" viewBox="0 0 24 24"><path d="M4 10h16l-1.5-6h-13L4 10Z"/><path d="M5 10v10h14V10M9 20v-6h6v6M4 10a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0"/></symbol>
         <symbol id="icon-receivable" viewBox="0 0 24 24"><path d="M3 7h18v13H3zM3 7l2-3h14l2 3"/><path d="M16 13h5m-13 0h4"/><circle cx="8" cy="13" r="1"/></symbol>
         <symbol id="icon-payment" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 10h18m-13 5h4"/></symbol>
+        <symbol id="icon-process" viewBox="0 0 24 24"><path d="M4 3h16v18H4z"/><path d="M8 7h8M8 11h8M8 15h5M8 18h3"/></symbol>
+        <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18M7 14h3m4 0h3M7 18h3"/></symbol>
+        <symbol id="icon-radar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 12l7-7"/></symbol>
         <symbol id="icon-email" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></symbol>
         <symbol id="icon-settings" viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="m19.4 15 .1.1 1.1.9-1.5 2.6-1.4-.5a8 8 0 0 1-1.7 1l-.2 1.5h-3l-.2-1.5a8 8 0 0 1-1.7-1l-1.4.5-1.5-2.6 1.1-.9a8 8 0 0 1 0-2l-1.1-.9 1.5-2.6 1.4.5a8 8 0 0 1 1.7-1L12.8 7h3l.2 1.5a8 8 0 0 1 1.7 1l1.4-.5 1.5 2.6-1.1.9a8 8 0 0 1-.1 2Z"/></symbol>
     </svg>
@@ -41,6 +44,37 @@
                     <svg class="nav-icon" aria-hidden="true"><use href="#icon-overview"></use></svg> Visão geral
                 </a>
             </nav>
+
+            {% if perms.juridico.view_processo or perms.juridico.view_prazo or perms.juridico.view_tarefa or perms.juridico.view_publicacao %}
+                <button class="nav-label nav-group-toggle" type="button" data-menu-group="juridico" aria-expanded="true" aria-controls="nav-juridico">
+                    <span>Jurídico</span><span class="nav-group-indicator" aria-hidden="true">⌄</span>
+                </button>
+                <nav class="sidebar-nav" id="nav-juridico" aria-label="Jurídico">
+                    {% if perms.juridico.view_processo %}
+                        <a class="nav-link {% if active_module == 'processos' %}is-active{% endif %}" href="{% url 'record-list' module='processos' %}">
+                            <svg class="nav-icon" aria-hidden="true"><use href="#icon-process"></use></svg> Processos
+                        </a>
+                        <a class="nav-link {% if active_module == 'movimentacoes' %}is-active{% endif %}" href="{% url 'record-list' module='movimentacoes' %}">
+                            <svg class="nav-icon" aria-hidden="true"><use href="#icon-process"></use></svg> Movimentações
+                        </a>
+                    {% endif %}
+                    {% if perms.juridico.view_prazo %}
+                        <a class="nav-link {% if active_module == 'prazos' %}is-active{% endif %}" href="{% url 'record-list' module='prazos' %}">
+                            <svg class="nav-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg> Prazos
+                        </a>
+                    {% endif %}
+                    {% if perms.juridico.view_tarefa %}
+                        <a class="nav-link {% if active_module == 'tarefas' %}is-active{% endif %}" href="{% url 'record-list' module='tarefas' %}">
+                            <svg class="nav-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg> Agenda e tarefas
+                        </a>
+                    {% endif %}
+                    {% if perms.juridico.view_publicacao %}
+                        <a class="nav-link {% if active_module == 'publicacoes' %}is-active{% endif %}" href="{% url 'record-list' module='publicacoes' %}">
+                            <svg class="nav-icon" aria-hidden="true"><use href="#icon-radar"></use></svg> Publicações
+                        </a>
+                    {% endif %}
+                </nav>
+            {% endif %}
 
             {% if perms.crm.view_conta or perms.crm.view_proposta %}
                 <button class="nav-label nav-group-toggle" type="button" data-menu-group="crm" aria-expanded="true" aria-controls="nav-crm">
@@ -178,13 +212,13 @@
         const toggle = document.getElementById("menu-toggle");
         const overlay = document.getElementById("sidebar-overlay");
         const mobileViewport = window.matchMedia("(max-width: 800px)");
-        const sidebarStorageKey = "erp-vity-sidebar-hidden";
+        const sidebarStorageKey = "erp-vity-adv-sidebar-hidden";
         let mobileMenuOpen = false;
         document.querySelectorAll("[data-menu-group]").forEach((groupToggle) => {
             const groupNav = document.getElementById(
                 groupToggle.getAttribute("aria-controls")
             );
-            const storageKey = `erp-vity-menu-group-${groupToggle.dataset.menuGroup}`;
+            const storageKey = `erp-vity-adv-menu-group-${groupToggle.dataset.menuGroup}`;
             const activeLink = groupNav.querySelector(".nav-link.is-active");
             const savedState = window.localStorage.getItem(storageKey);
             const expanded = activeLink !== null || savedState !== "false";

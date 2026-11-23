@@ -91,6 +91,18 @@
                 </div>
             </div>
             <div class="quick-list">
+                {% if perms.juridico.view_processo %}
+                    <a class="quick-link" href="{% url 'record-list' module='processos' %}">
+                        <span class="quick-icon">PJ</span>
+                        <span><strong>Processos</strong><small>CNJ, partes, tribunal e responsável</small></span>
+                    </a>
+                {% endif %}
+                {% if perms.juridico.view_prazo %}
+                    <a class="quick-link" href="{% url 'record-list' module='prazos' %}">
+                        <span class="quick-icon">PZ</span>
+                        <span><strong>Prazos processuais</strong><small>Vencimentos e responsáveis</small></span>
+                    </a>
+                {% endif %}
                 {% if perms.crm.view_conta %}
                     <a class="quick-link" href="{% url 'record-list' module='contas' %}">
                         <span class="quick-icon">CRM</span>
