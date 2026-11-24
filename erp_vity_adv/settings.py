@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -82,6 +83,11 @@ if database_url:
             ssl_require=not DEBUG,
         )
     }
+    DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
+elif not DEBUG:
+    raise ImproperlyConfigured(
+        "DATABASE_URL must be configured when DEBUG is disabled."
+    )
 else:
     DATABASES = {
         "default": {

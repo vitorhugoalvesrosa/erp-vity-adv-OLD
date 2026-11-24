@@ -17,7 +17,7 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edite `.env` com os dados do PostgreSQL local. Quando `DATABASE_URL` estiver vazia, a aplicação usa `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST` e `DB_PORT`. Defina também uma `SECRET_KEY` própria para o ambiente.
+Para desenvolvimento local, mantenha `DEBUG=True` e configure `.env` com os dados do PostgreSQL local. Quando `DATABASE_URL` estiver vazia, a aplicação usa `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST` e `DB_PORT`. Defina também uma `SECRET_KEY` própria para o ambiente. Em produção (`DEBUG=False`), `DATABASE_URL` é obrigatória.
 
 ```bash
 python manage.py migrate
@@ -124,6 +124,6 @@ Configure `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` ou `FRONTEND_URL` no `.
 
 ## Deploy no Render
 
-O arquivo `render.yaml` configura o Web Service Python. No Blueprint, forneça em `DATABASE_URL` a URL interna de um PostgreSQL existente no mesmo workspace e região; o valor é solicitado pelo Render e não fica salvo no repositório. O serviço instala `requirements.txt`, coleta os arquivos estáticos com WhiteNoise, executa as migrations, atualiza os grupos de acesso e tenta o bootstrap único das contas ao iniciar, e então inicia o Gunicorn.
+O arquivo `render.yaml` configura o Web Service Python. No Render, configure `DATABASE_URL` com a connection string pooled do branch do Neon (`Connect` → `Pooled connection`) como variável secreta do serviço; não a salve no repositório nem em arquivos versionados. O Django exige SSL em produção e desativa server-side cursors para compatibilidade com o pooler. O serviço instala `requirements.txt`, coleta os arquivos estáticos com WhiteNoise, executa as migrations, atualiza os grupos de acesso e tenta o bootstrap único das contas ao iniciar, e então inicia o Gunicorn.
 
-O Render gera `SECRET_KEY`. A configuração define `DEBUG=False` e redirecionamento HTTPS. O host externo é permitido via `RENDER_EXTERNAL_HOSTNAME`. Não publique arquivos `.env` ou credenciais; mantenha as variáveis secretas na configuração do ambiente do Render.
+O Render gera `SECRET_KEY`. A configuração define `DEBUG=False` e redirecionamento HTTPS. O host externo é permitido via `RENDER_EXTERNAL_HOSTNAME`. Após conectar o repositório no Render, cada deploy executa `migrate` no banco Neon antes de iniciar o serviço. Não publique arquivos `.env` ou credenciais; mantenha as variáveis secretas na configuração do ambiente do Render.
